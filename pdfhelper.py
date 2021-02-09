@@ -73,7 +73,8 @@ class PdfHelper(object):
             self.doc.saveIncr()
 
 
-if __name__ == "__main__":
+
+def main():
     args = parse_args()
     path = args.file
     toc_path = args.toc_path
@@ -82,3 +83,6 @@ if __name__ == "__main__":
         pdf.export_toc(toc_path)
     if args.import_toc:
         pdf.import_toc(toc_path)
+
+if __name__ == "__main__":
+    main()
