@@ -1,18 +1,35 @@
 #!/usr/bin/env python3
 
+"""
+Some useful functions to process a PDF file.
+"""
+
 import re
 import argparse
 
 import fitz
 
-parser = argparse.ArgumentParser(description="Process PDF toc")
-parser.add_argument("file", help="pdf file to deal with")
-parser.add_argument("--import-toc", "-i", help="import toc", action="store_true")
-parser.add_argument("--export-toc", "-e", help="export toc", action="store_true")
-parser.add_argument("--toc-path", "-t", help="toc file path", default="toc.org")
 
+def parse_args():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument(
+        "file",
+        metavar="INFILE",
+        help="PDF file to process",
+        type=argparse.FileType("rb"),
+    )
 
-args = parser.parse_args()
+    g = p.add_argument_group("Process TOC")
+    g.add_argument("--import-toc", "-i", help="import toc", action="store_true")
+    g.add_argument(
+        "--export-toc",
+        "-e",
+        help="export toc of INPUT to TOC_PATH",
+        action="store_true",
+    )
+    g.add_argument("--toc-path", "-t", help="toc file path", default="toc.org")
+
+    return p.parse_args()
 
 
 class PdfHelper(object):
@@ -39,7 +56,7 @@ class PdfHelper(object):
                     current_indent = len(match.group(1))
                     if current_indent:
                         # NOTE No indentation in first row,
-                        # ran into this part after lvl assigned
+                        # run into this part after lvl assigned
                         if current_indent > last_indent:
                             lvl += lvl
                         elif current_indent < last_indent:
@@ -50,13 +67,14 @@ class PdfHelper(object):
                     page = int(match.group(3))
                     toc.append([lvl, title, page])
                     last_indent = current_indent
-                else:
+                else:  # TODO support set the first page and gap
                     raise ("Unsuppoted Format!")
             self.doc.set_toc(toc)
             self.doc.saveIncr()
 
 
 if __name__ == "__main__":
+    args = parse_args()
     path = args.file
     toc_path = args.toc_path
     pdf = PdfHelper(path)
