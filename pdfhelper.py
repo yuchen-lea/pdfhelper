@@ -51,7 +51,6 @@ class PdfHelper(object):
     def __init__(self, path):
         self.path = path
         self.doc = fitz.open(path)
-        self.title = self.doc.metadata.get("title")
         self.file_name = os.path.splitext(os.path.split(path)[1])[0]
 
     def export_toc(self, toc_path):
@@ -109,8 +108,7 @@ class PdfHelper(object):
                     pix = page.get_pixmap(
                         annots=False, clip=annot.rect, matrix=fitz.Matrix(4, 4)
                     )
-                    base_name = self.title if self.title else self.file_name
-                    base_name = base_name.replace(" ", "-")
+                    base_name = self.file_name.replace(" ", "-")
                     picture_path = os.path.join(
                         annot_image_dir, f"{base_name}-{annot_id}.png"
                     )
