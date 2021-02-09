@@ -9,8 +9,9 @@ import argparse
 import os
 from operator import itemgetter
 
-
 import fitz
+
+from picture_handler import Picture
 
 ANNOT_TYPES = [0, 4, 8, 9, 10, 11]
 
@@ -88,7 +89,7 @@ class PdfHelper(object):
             self.doc.set_toc(toc)
             self.doc.saveIncr()
 
-    def get_annots(self, annot_image_dir):
+    def get_annots(self, annot_image_dir, ocr_api):
         if not self.doc.has_annots():
             return
         annot_list = []
@@ -115,6 +116,9 @@ class PdfHelper(object):
                     )
                     pix.writePNG(picture_path)
                     content = [picture_path]
+                    if ocr_api:
+                        ocr_result = Picture(picture_path).get_ocr_result(ocr_api)
+                        content.append(ocr_result)
                 else:
                     content = [annot.info.get("content")]
                     if annot.type[0] in [8, 9, 10, 11]:
@@ -135,7 +139,8 @@ class PdfHelper(object):
 
     def format_annots(
         self,
-        annot_image_dir,
+        annot_image_dir: str = "~/Pictures/",
+        ocr_api: str = "",
         checkbox_on_toc: bool = True,
         checkbox_on_annot: bool = False,
     ):
@@ -143,7 +148,7 @@ class PdfHelper(object):
         results_strs = []
         level = 0
         results_items.extend(self.toc_dict)
-        results_items.extend(self.get_annots(annot_image_dir))
+        results_items.extend(self.get_annots(annot_image_dir, ocr_api))
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             page = item.get("page")
