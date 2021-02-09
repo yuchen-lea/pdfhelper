@@ -6,8 +6,20 @@ Some useful functions to process a PDF file.
 
 import re
 import argparse
+import os
 
 import fitz
+
+ANNOT_TYPES = [0, 4, 8, 9, 10, 11]
+
+PYMUPDF_ANNOT_MAPPING = {
+    0: "Text",
+    4: "Square",
+    8: "Highlight",
+    9: "Underline",
+    10: "Squiggly",
+    11: "StrikeOut",
+}
 
 
 def parse_args():
@@ -35,7 +47,9 @@ def parse_args():
 class PdfHelper(object):
     def __init__(self, path):
         self.path = path
-        self.doc = fitz.open(self.path)
+        self.doc = fitz.open(path)
+        self.title = self.doc.metadata.get("title")
+        self.file_name = os.path.splitext(os.path.split(path)[1])[0]
 
     def export_toc(self, toc_path):
         toc = self.doc.get_toc()
@@ -72,7 +86,59 @@ class PdfHelper(object):
             self.doc.set_toc(toc)
             self.doc.saveIncr()
 
+    def get_annots(self, annot_image_dir):
+        if not self.doc.has_annots():
+            return
+        annot_list = []
+        for page in self.doc.pages():
+            annot_num = 0
+            wordlist = page.getText("words")  # list of words on page
+            wordlist.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
+            for annot in page.annots():
+                annot_type = annot.type[0]
+                if annot_type not in ANNOT_TYPES:
+                    continue
+                page_num = page.number + 1
+                annot_id = f"annot-{page_num}-{annot_num}"
+                height = annot.rect[1] / page.rect[3]
+                if annot.type[0] == 4:  # rectangle
+                    pix = page.get_pixmap(
+                        annots=False, clip=annot.rect, matrix=fitz.Matrix(4, 4)
+                    )
+                    base_name = self.title if self.title else self.file_name
+                    base_name = base_name.replace(" ", "-")
+                    picture_path = os.path.join(
+                        annot_image_dir, f"{base_name}-{annot_id}.png"
+                    )
+                    pix.writePNG(picture_path)
+                    content = [picture_path]
+                else:
+                    content = [annot.info.get("content")]
+                    if annot.type[0] in [8, 9, 10, 11]:
+                        text = self._parse_highlight(annot, wordlist)
+                        content.append(text)
+                annot_list.append(
+                    {
+                        "type": annot.type[1],
+                        "page": page_num,
+                        "content": content,
+                        "id": annot_id,
+                        "height": height,
+                    }
+                )
+                annot_num += 1
+        return annot_list
 
+    def _parse_highlight(self, annot, wordlist):
+        points = annot.vertices
+        quad_count = int(len(points) / 4)
+        sentences = ["" for i in range(quad_count)]
+        for i in range(quad_count):
+            r = fitz.Quad(points[i * 4 : i * 4 + 4]).rect
+            words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(r)]
+            sentences[i] = " ".join(w[4] for w in words)
+        sentence = " ".join(sentences)
+        return sentence
 
 def main():
     args = parse_args()
