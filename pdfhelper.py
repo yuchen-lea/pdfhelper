@@ -7,6 +7,8 @@ Some useful functions to process a PDF file.
 import re
 import argparse
 import os
+from operator import itemgetter
+
 
 import fitz
 
@@ -131,6 +133,58 @@ class PdfHelper(object):
                 annot_num += 1
         return annot_list
 
+    def format_annots(
+        self,
+        annot_image_dir,
+        checkbox_on_toc: bool = True,
+        checkbox_on_annot: bool = False,
+    ):
+        results_items = []
+        results_strs = []
+        level = 0
+        results_items.extend(self.toc_dict)
+        results_items.extend(self.get_annots(annot_image_dir))
+        results_items = sorted(results_items, key=itemgetter("page"))
+        for item in results_items:
+            page = item.get("page")
+            content = item.get("content")
+            if item.get("type") == "toc":
+                level = item.get("depth")
+                string = "{indent}- {checkbox}{link}".format(
+                    indent=(level - 1) * 2 * " ",
+                    checkbox="[ ] " if checkbox_on_toc else "",
+                    link="[[{}:{}::{}][{}]]".format(
+                        "pdf",
+                        self.path,
+                        page,
+                        content[0].strip(),
+                    ),
+                )
+                pass
+            else:  # note
+                annot_type = item.get("type")
+                string = "{indent}- {checkbox}{color}{link} {content}".format(
+                    indent=(level) * 2 * " ",
+                    checkbox="[ ] " if checkbox_on_annot else "",
+                    color=f"{item.get('color')} ",
+                    link="[[{}:{}::{}++{:.2f}][{}]]".format(
+                        "pdf",
+                        self.path,
+                        page,
+                        item.get("height"),
+                        item.get("id"),
+                    ),
+                    content=f"[[file:{content[0]}]]"
+                    if annot_type == "Square"
+                    else content[0],
+                )
+                if len(content) > 1 and content[1]:  # add multiline text in quote block
+                    string += "\n" + (level + 1) * 2 * " " + "#+begin_quote\n"
+                    string += content[1]
+                    string += "\n" + (level + 1) * 2 * " " + "#+end_quote"
+            results_strs.append(string)
+        return "\n".join(results_strs)
+
     def _parse_highlight(self, annot, wordlist):
         points = annot.vertices
         quad_count = int(len(points) / 4)
@@ -141,6 +195,13 @@ class PdfHelper(object):
             sentences[i] = " ".join(w[4] for w in words)
         sentence = " ".join(sentences)
         return sentence
+
+    @property
+    def toc_dict(self):
+        toc = self.doc.get_toc()
+        return [
+            {"type": "toc", "depth": x[0], "content": [x[1]], "page": x[2]} for x in toc
+        ]
 
 
 class RGB(object):
