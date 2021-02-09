@@ -100,6 +100,7 @@ class PdfHelper(object):
                     continue
                 page_num = page.number + 1
                 annot_id = f"annot-{page_num}-{annot_num}"
+                color = RGB(annot.colors.get("stroke")).to_hex()
                 height = annot.rect[1] / page.rect[3]
                 if annot.type[0] == 4:  # rectangle
                     pix = page.get_pixmap(
@@ -124,6 +125,7 @@ class PdfHelper(object):
                         "content": content,
                         "id": annot_id,
                         "height": height,
+                        "color": color,
                     }
                 )
                 annot_num += 1
@@ -139,6 +141,22 @@ class PdfHelper(object):
             sentences[i] = " ".join(w[4] for w in words)
         sentence = " ".join(sentences)
         return sentence
+
+
+class RGB(object):
+    def __init__(self, value):
+        self.value = value
+
+    def to_hex(self):
+        if len(self.value) == 3 and type(self.value[0]) == float:
+            return "#" + "".join([self._float2hex(x) for x in self.value])
+
+    def _float2hex(self, x: float):
+        return self._int2hex(int(255 * x))
+
+    def _int2hex(self, x: int):
+        return hex(x).replace("x", "0")[-2:]
+
 
 def main():
     args = parse_args()
