@@ -27,7 +27,7 @@ class PdfHelper(object):
         self.doc = fitz.open(path)
         self.file_name = os.path.splitext(os.path.split(path)[1])[0]
 
-    def export_toc(self, toc_path):
+    def export_toc(self, toc_path: str = ""):
         toc = self.doc.get_toc()
         contents = [f"{(x[0]-1)*2*' '}- {x[1].strip()}#{x[2]}" for x in toc]
         if not toc_path:
@@ -54,9 +54,9 @@ class PdfHelper(object):
                         # NOTE No indentation in first row,
                         # run into this part after lvl assigned
                         if current_indent > last_indent:
-                            lvl += lvl
+                            lvl += 1
                         elif current_indent < last_indent:
-                            lvl -= lvl
+                            lvl -= 1
                     else:
                         lvl = 1
                     title = page_match.group(2)
