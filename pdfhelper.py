@@ -18,7 +18,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="1.2.0")
+    p.add_argument("--version", "-v", action="version", version="1.3.0")
 
     group_toc = p.add_argument_group("Process TOC", "PDF TOC <-> Human readable List")
     group_toc.add_argument(

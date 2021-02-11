@@ -43,10 +43,13 @@ class PdfHelper(object):
         with open(toc_path, "r") as data:
             lines = data.readlines()
             toc = []
+            page_gap = 0
             for line in lines:
-                match = re.match(r"( *)[-+] (.+)#(\d+)", line)
-                if match:
-                    current_indent = len(match.group(1))
+                page_match = re.match(r"( *)[-+] (.+)#(\d+)", line)
+                gap_match = re.match(r"# *\+(\d+)", line)
+                first_page_match = re.match(r"#.+=(\d+)", line)
+                if page_match:
+                    current_indent = len(page_match.group(1))
                     if current_indent:
                         # NOTE No indentation in first row,
                         # run into this part after lvl assigned
@@ -56,10 +59,14 @@ class PdfHelper(object):
                             lvl -= lvl
                     else:
                         lvl = 1
-                    title = match.group(2)
-                    page = int(match.group(3))
+                    title = page_match.group(2)
+                    page = int(page_match.group(3)) + page_gap
                     toc.append([lvl, title, page])
                     last_indent = current_indent
+                elif first_page_match:
+                    page_gap += int(first_page_match.group(1)) - 1
+                elif gap_match:
+                    page_gap += int(gap_match.group(1))
                 else:  # TODO support set the first page and gap
                     raise ("Unsuppoted Format!")
             self.doc.set_toc(toc)
