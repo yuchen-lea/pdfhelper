@@ -64,14 +64,18 @@ class PdfHelper(object):
             self.doc.set_toc(toc)
             self.doc.saveIncr()
 
-    def get_annots(self, annot_image_dir, ocr_api):
+    def _get_annots(
+        self,
+        annot_image_dir: str = "",
+        ocr_api: str = "",
+    ):
         if not self.doc.has_annots():
             return
         annot_list = []
         for page in self.doc.pages():
             annot_num = 0
-            wordlist = page.getText("words")  # list of words on page
-            wordlist.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
+            word_list = page.getText("words")  # list of words on page
+            word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
             for annot in page.annots():
                 annot_type = annot.type[0]
                 if annot_type not in ANNOT_TYPES:
@@ -80,7 +84,7 @@ class PdfHelper(object):
                 annot_id = f"annot-{page_num}-{annot_num}"
                 color = RGB(annot.colors.get("stroke")).to_hex()
                 height = annot.rect[1] / page.rect[3]
-                if annot.type[0] == 4:  # rectangle
+                if annot_type == 4:  # rectangle
                     pix = page.get_pixmap(
                         annots=False, clip=annot.rect, matrix=fitz.Matrix(4, 4)
                     )
@@ -95,8 +99,8 @@ class PdfHelper(object):
                         content.append(ocr_result)
                 else:
                     content = [annot.info.get("content")]
-                    if annot.type[0] in [8, 9, 10, 11]:
-                        text = self._parse_highlight(annot, wordlist)
+                    if annot_type in [8, 9, 10, 11]:
+                        text = self._parse_highlight(annot, word_list)
                         content.append(text)
                 annot_list.append(
                     {
@@ -113,25 +117,36 @@ class PdfHelper(object):
 
     def format_annots(
         self,
-        annot_image_dir: str = "~/Pictures/",
+        annot_image_dir: str = "",
         ocr_api: str = "",
-        checkbox_on_toc: bool = True,
-        checkbox_on_annot: bool = False,
+        output_file: str = "",
+        zoom: int = 4,
+        with_toc: bool = True,
+        toc_list_item_format: str = "{checkbox} {link}",
+        annot_list_item_format: str = "{checkbox} {color} {link} {content}",
+        run_test: bool = False,
     ):
         results_items = []
         results_strs = []
         level = 0
-        results_items.extend(self.toc_dict)
-        results_items.extend(self.get_annots(annot_image_dir, ocr_api))
+        if with_toc:
+            results_items.extend(self.toc_dict)
+        results_items.extend(
+            self._get_annots(
+                annot_image_dir=annot_image_dir,
+                ocr_api=ocr_api,
+            )
+        )
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             page = item.get("page")
             content = item.get("content")
             if item.get("type") == "toc":
                 level = item.get("depth")
-                string = "{indent}- {checkbox}{link}".format(
+                string = ("{indent}- " + toc_list_item_format).format(
                     indent=(level - 1) * 2 * " ",
-                    checkbox="[ ] " if checkbox_on_toc else "",
+                    checkbox="[ ]",
+                    title=content[0].strip(),
                     link="[[{}:{}::{}][{}]]".format(
                         "pdf",
                         self.path,
@@ -139,13 +154,13 @@ class PdfHelper(object):
                         content[0].strip(),
                     ),
                 )
-                pass
             else:  # note
                 annot_type = item.get("type")
-                string = "{indent}- {checkbox}{color}{link} {content}".format(
+                string = ("{indent}- " + annot_list_item_format).format(
                     indent=(level) * 2 * " ",
-                    checkbox="[ ] " if checkbox_on_annot else "",
-                    color=f"{item.get('color')} ",
+                    checkbox="[ ]",
+                    color=item.get("color"),
+                    annot_id=item.get("id"),
                     link="[[{}:{}::{}++{:.2f}][{}]]".format(
                         "pdf",
                         self.path,
