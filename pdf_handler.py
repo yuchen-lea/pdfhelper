@@ -71,7 +71,9 @@ class PdfHelper(object):
                     if line.strip():
                         raise ("Unsuppoted Format!")
             self.doc.set_toc(toc)
-            self.doc.saveIncr()
+            temp_file_path = self.path + "2"
+            self.doc.save(temp_file_path, garbage=2)
+            os.replace(temp_file_path, self.path)
 
     def _get_annots(
         self,
