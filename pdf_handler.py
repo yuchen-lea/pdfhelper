@@ -47,7 +47,7 @@ class PdfHelper(object):
             for line in lines:
                 page_match = re.match(r"( *)[-+] (.+)#(\d+)", line)
                 gap_match = re.match(r"# *\+(\d+)", line)
-                first_page_match = re.match(r"#.+=(\d+)", line)
+                first_page_match = re.match(r"#.+= *(\d+)", line)
                 if page_match:
                     current_indent = len(page_match.group(1))
                     if current_indent:
