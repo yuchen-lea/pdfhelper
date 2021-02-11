@@ -68,6 +68,7 @@ class PdfHelper(object):
         self,
         annot_image_dir: str = "",
         ocr_api: str = "",
+        zoom: int = 4,  # image zoom factor
     ):
         if not self.doc.has_annots():
             return
@@ -86,7 +87,9 @@ class PdfHelper(object):
                 height = annot.rect[1] / page.rect[3]
                 if annot_type == 4:  # rectangle
                     pix = page.get_pixmap(
-                        annots=False, clip=annot.rect, matrix=fitz.Matrix(4, 4)
+                        annots=False,  # TODO donnot display annots, maybe let user customize this?
+                        clip=annot.rect,
+                        matrix=fitz.Matrix(zoom, zoom),  # zoom image
                     )
                     base_name = self.file_name.replace(" ", "-")
                     picture_path = os.path.join(
@@ -135,6 +138,7 @@ class PdfHelper(object):
             self._get_annots(
                 annot_image_dir=annot_image_dir,
                 ocr_api=ocr_api,
+                zoom=zoom,
             )
         )
         results_items = sorted(results_items, key=itemgetter("page"))
