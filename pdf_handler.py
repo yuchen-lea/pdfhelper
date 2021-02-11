@@ -66,9 +66,10 @@ class PdfHelper(object):
                 elif first_page_match:
                     page_gap += int(first_page_match.group(1)) - 1
                 elif gap_match:
-                    page_gap += int(gap_match.group(1))
-                else:  # TODO support set the first page and gap
-                    raise ("Unsuppoted Format!")
+                    page_gap -= int(gap_match.group(1))
+                else:
+                    if line.strip():
+                        raise ("Unsuppoted Format!")
             self.doc.set_toc(toc)
             self.doc.saveIncr()
 
