@@ -132,3 +132,4 @@ You can customize the note format by
 This project is inspired by the following tool:
 
 - [[https://github.com/0xabu/pdfannots][0xabu/pdfannots: Extracts and formats text annotations from a PDF file]]: based on pdfminer and format as markdown text. It deals with hyphens but donot extract rectangle annot.
+- [[https://www.cnblogs.com/pdfpatcher/archive/2011/04/12/2013974.html][PDFPatcher]](Chinese) a great pdf utility tool.
