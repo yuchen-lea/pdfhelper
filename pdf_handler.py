@@ -2,6 +2,7 @@
 
 import re
 import os
+import sys
 from operator import itemgetter
 
 import fitz
@@ -69,11 +70,16 @@ class PdfHelper(object):
         annot_image_dir: str = "",
         ocr_api: str = "",
         zoom: int = 4,  # image zoom factor
+        run_test: bool = False,  # get 3 annot and 3 pic at most
     ):
         if not self.doc.has_annots():
             return
         annot_list = []
+        annot_count = 0
+        extracted_pic_count = 0
         for page in self.doc.pages():
+            if run_test and annot_count > 2 and extracted_pic_count > 2:
+                break
             annot_num = 0
             word_list = page.getText("words")  # list of words on page
             word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
@@ -86,6 +92,8 @@ class PdfHelper(object):
                 color = RGB(annot.colors.get("stroke")).to_hex()
                 height = annot.rect[1] / page.rect[3]
                 if annot_type == 4:  # rectangle
+                    if run_test and extracted_pic_count > 2:
+                        continue
                     pix = page.get_pixmap(
                         annots=False,  # TODO donnot display annots, maybe let user customize this?
                         clip=annot.rect,
@@ -96,11 +104,14 @@ class PdfHelper(object):
                         annot_image_dir, f"{base_name}-{annot_id}.png"
                     )
                     pix.writePNG(picture_path)
+                    extracted_pic_count += 1
                     content = [picture_path]
                     if ocr_api:
                         ocr_result = Picture(picture_path).get_ocr_result(ocr_api)
                         content.append(ocr_result)
                 else:
+                    if run_test and annot_count > 2:
+                        continue
                     content = [annot.info.get("content")]
                     if annot_type in [8, 9, 10, 11]:
                         text = self._parse_highlight(annot, word_list)
@@ -116,6 +127,7 @@ class PdfHelper(object):
                     }
                 )
                 annot_num += 1
+                annot_count += 1
         return annot_list
 
     def format_annots(
@@ -139,6 +151,7 @@ class PdfHelper(object):
                 annot_image_dir=annot_image_dir,
                 ocr_api=ocr_api,
                 zoom=zoom,
+                run_test=run_test,
             )
         )
         results_items = sorted(results_items, key=itemgetter("page"))
