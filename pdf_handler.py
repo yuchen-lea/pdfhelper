@@ -29,6 +29,9 @@ class PdfHelper(object):
     def export_toc(self, toc_path):
         toc = self.doc.get_toc()
         contents = [f"{(x[0]-1)*2*' '}- {x[1].strip()}#{x[2]}" for x in toc]
+        if not toc_path:
+            print("\n".join(contents))
+            return
         try:
             with open(toc_path, "w") as data:
                 print("\n".join(contents), file=data)
@@ -159,7 +162,11 @@ class PdfHelper(object):
                     string += content[1]
                     string += "\n" + (level + 1) * 2 * " " + "#+end_quote"
             results_strs.append(string)
-        return "\n".join(results_strs)
+        if not output_file:
+            print("\n".join(results_strs))
+            return
+        with open(output_file, "w") as data:
+            print("\n".join(results_strs), file=data)
 
     def _parse_highlight(self, annot, wordlist):
         points = annot.vertices
