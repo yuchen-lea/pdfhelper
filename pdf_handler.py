@@ -9,7 +9,15 @@ import fitz
 
 from picture_handler import Picture
 
-ANNOT_TYPES = [0, 4, 8, 9, 10, 11]
+TEXT = 0
+SQUARE = 4
+HIGHLIGHT = 8
+UNDERLINE = 9
+SQUIGGLY = 10
+STRIKEOUT = 11
+INK = 15
+
+ANNOT_TYPES = [TEXT, SQUARE, HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT, INK]
 
 PYMUPDF_ANNOT_MAPPING = {
     0: "Text",
@@ -18,6 +26,7 @@ PYMUPDF_ANNOT_MAPPING = {
     9: "Underline",
     10: "Squiggly",
     11: "StrikeOut",
+    15: "Ink",
 }
 
 
@@ -108,12 +117,20 @@ class PdfHelper(object):
                 annot_id = f"annot-{page_num}-{annot_num}"
                 color = RGB(annot.colors.get("stroke")).to_hex()
                 height = annot.rect[1] / page.rect[3]
-                if annot_type == 4:  # rectangle
+                if annot_type in [SQUARE, INK]:
                     if run_test and extracted_pic_count > 2:
                         continue
+                    export_picture_with_annot = (
+                        False if annot_type == SQUARE else True
+                    )  # TODO maybe let user customize this?
+                    picture_clip = (
+                        annot.rect
+                        if annot_type == SQUARE
+                        else self._extend_ink_annot_clip(annot, page)
+                    )
                     pix = page.get_pixmap(
-                        annots=False,  # TODO donnot display annots, maybe let user customize this?
-                        clip=annot.rect,
+                        annots=export_picture_with_annot,
+                        clip=picture_clip,
                         matrix=fitz.Matrix(zoom, zoom),  # zoom image
                     )
                     base_name = self.file_name.replace(" ", "-")
@@ -123,7 +140,10 @@ class PdfHelper(object):
                     pix.writePNG(picture_path)
                     extracted_pic_count += 1
                     content = [picture_path]
-                    if ocr_api:
+                    text = self._extract_rectangle_text(picture_clip, word_list)
+                    if text:
+                        content.append(text)
+                    elif ocr_api:
                         ocr_result = Picture(picture_path).get_ocr_result(ocr_api)
                         content.append(ocr_result)
                 else:
@@ -146,6 +166,9 @@ class PdfHelper(object):
                 annot_num += 1
                 annot_count += 1
         return annot_list
+
+    def _extend_ink_annot_clip(self, annot, page):
+        return fitz.Rect(0, annot.rect.y0, page.mediabox.x1, annot.rect.y1)
 
     def format_annots(
         self,
@@ -203,7 +226,7 @@ class PdfHelper(object):
                         item.get("id"),
                     ),
                     content=f"[[file:{content[0]}]]"
-                    if annot_type == "Square"
+                    if annot_type in ["Square", "Ink"]
                     else content[0],
                 )
                 if len(content) > 1 and content[1]:  # add multiline text in quote block
