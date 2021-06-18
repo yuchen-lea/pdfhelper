@@ -29,17 +29,21 @@ class PdfHelper(object):
 
     def export_toc(self, toc_path: str = ""):
         toc = self.doc.get_toc()
-        contents = [f"{(x[0]-1)*2*' '}- {x[1].strip()}#{x[2]}" for x in toc]
+        toc_text = self.toc_text(toc)
         if not toc_path:
-            print("\n".join(contents))
+            print(toc_text)
             return
         try:
             with open(toc_path, "w") as data:
-                print("\n".join(contents), file=data)
+                print(toc_text, file=data)
         except IOError as ioerr:
             print("File Error: " + str(ioerr))
 
-    def import_toc(self, toc_path):
+    def toc_text(self, toc: list):
+        contents = [f"{(x[0] - 1) * 2 * ' '}- {x[1].strip()}#{x[2]}" for x in toc]
+        return "\n".join(contents)
+
+    def import_toc_from_file(self, toc_path):
         with open(toc_path, "r") as data:
             lines = data.readlines()
             toc = []
@@ -70,10 +74,13 @@ class PdfHelper(object):
                 else:
                     if line.strip():
                         raise ("Unsuppoted Format!")
-            self.doc.set_toc(toc)
-            temp_file_path = self.path + "2"
-            self.doc.save(temp_file_path, garbage=2)
-            os.replace(temp_file_path, self.path)
+            self.save_toc(toc)
+
+    def save_toc(self, toc: list):
+        self.doc.set_toc(toc)
+        temp_file_path = self.path + "2"
+        self.doc.save(temp_file_path, garbage=2)
+        os.replace(temp_file_path, self.path)
 
     def _get_annots(
         self,
@@ -220,6 +227,16 @@ class PdfHelper(object):
             sentences[i] = " ".join(w[4] for w in words)
         sentence = " ".join(sentences)
         return sentence
+    def extract_toc_from_text(self):
+        toc = []
+        for num in range(self.doc.page_count):
+            page = self.doc.load_page(num)
+            text = page.get_text()
+            toc_item = [line for line in text.split("\n") if is_toc_item(line)]
+            if len(toc_item) < 5:
+                toc.extend([[1, x, num + 1] for x in toc_item])
+        print(self.toc_text(toc))
+        self.save_toc(toc)
 
     @property
     def toc_dict(self):
@@ -242,6 +259,12 @@ class RGB(object):
 
     def _int2hex(self, x: int):
         return hex(x).replace("x", "0")[-2:]
+
+
+def is_toc_item(text: str):
+    if re.match(r"^第 \d+ 章.+", text):
+        return True
+    return False
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ def main(args):
     if args.export_toc:
         pdf.export_toc(toc_path)
     if args.import_toc:
-        pdf.import_toc(toc_path)
+        pdf.import_toc_from_file(toc_path)
     if args.export_annot:
         pdf.format_annots(
             annot_image_dir=args.annot_image_dir,
