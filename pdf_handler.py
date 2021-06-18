@@ -131,7 +131,7 @@ class PdfHelper(object):
                         continue
                     content = [annot.info.get("content")]
                     if annot_type in [8, 9, 10, 11]:
-                        text = self._parse_highlight(annot, word_list)
+                        text = self._extract_rectangle_text(annot.rect, word_list)
                         content.append(text)
                 annot_list.append(
                     {
@@ -217,16 +217,11 @@ class PdfHelper(object):
         with open(output_file, "w") as data:
             print("\n".join(results_strs), file=data)
 
-    def _parse_highlight(self, annot, wordlist):
-        points = annot.vertices
-        quad_count = int(len(points) / 4)
-        sentences = ["" for i in range(quad_count)]
-        for i in range(quad_count):
-            r = fitz.Quad(points[i * 4 : i * 4 + 4]).rect
-            words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(r)]
-            sentences[i] = " ".join(w[4] for w in words)
-        sentence = " ".join(sentences)
-        return sentence
+    def _extract_rectangle_text(self, rect: fitz.Rect, wordlist):
+        words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
+        sentence = " ".join(w[4] for w in words)
+        return sentence.strip()
+
     def extract_toc_from_text(self):
         toc = []
         for num in range(self.doc.page_count):
