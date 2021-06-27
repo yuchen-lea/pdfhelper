@@ -50,6 +50,7 @@ class PdfHelper(object):
                 page_match = re.match(r"( *)[-+] (.+)#(\d+)", line)
                 gap_match = re.match(r"# *\+(\d+)", line)
                 first_page_match = re.match(r"#.+= *(\d+)", line)
+                indent_step = 2
                 if page_match:
                     current_indent = len(page_match.group(1))
                     if current_indent:
@@ -57,8 +58,9 @@ class PdfHelper(object):
                         # run into this part after lvl assigned
                         if current_indent > last_indent:
                             lvl += 1
+                            indent_step = current_indent - last_indent
                         elif current_indent < last_indent:
-                            lvl -= 1
+                            lvl -= int((last_indent - current_indent) / indent_step)
                     else:
                         lvl = 1
                     title = page_match.group(2)
