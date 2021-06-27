@@ -10,24 +10,13 @@ import fitz
 from picture_handler import Picture
 
 TEXT = 0
+LINE = 3
 SQUARE = 4
 HIGHLIGHT = 8
 UNDERLINE = 9
 SQUIGGLY = 10
 STRIKEOUT = 11
 INK = 15
-
-ANNOT_TYPES = [TEXT, SQUARE, HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT, INK]
-
-PYMUPDF_ANNOT_MAPPING = {
-    0: "Text",
-    4: "Square",
-    8: "Highlight",
-    9: "Underline",
-    10: "Squiggly",
-    11: "StrikeOut",
-    15: "Ink",
-}
 
 
 class PdfHelper(object):
@@ -110,65 +99,33 @@ class PdfHelper(object):
             word_list = page.getText("words")  # list of words on page
             word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
             for annot in page.annots():
-                annot_type = annot.type[0]
-                if annot_type not in ANNOT_TYPES:
-                    continue
+                annot_handler = AnnotationHandler(annot)
                 page_num = page.number + 1
                 annot_id = f"annot-{page_num}-{annot_num}"
-                color = RGB(annot.colors.get("stroke")).to_hex()
-                height = annot.rect[1] / page.rect[3]
-                if annot_type in [SQUARE, INK]:
-                    if run_test and extracted_pic_count > 2:
-                        continue
-                    export_picture_with_annot = (
-                        False if annot_type == SQUARE else True
-                    )  # TODO maybe let user customize this?
-                    picture_clip = (
-                        annot.rect
-                        if annot_type == SQUARE
-                        else self._extend_ink_annot_clip(annot, page)
-                    )
-                    pix = page.get_pixmap(
-                        annots=export_picture_with_annot,
-                        clip=picture_clip,
-                        matrix=fitz.Matrix(zoom, zoom),  # zoom image
-                    )
-                    base_name = self.file_name.replace(" ", "-")
-                    picture_path = os.path.join(
-                        annot_image_dir, f"{base_name}-{annot_id}.png"
-                    )
-                    pix.writePNG(picture_path)
+                picture_path = os.path.join(
+                    annot_image_dir,
+                    f'{self.file_name.replace(" ", "-")}-{annot_id}.png',
+                )
+                if annot_handler.save_pic(picture_path, zoom):
                     extracted_pic_count += 1
-                    content = [picture_path]
-                    text = self._extract_rectangle_text(picture_clip, word_list)
-                    if text:
-                        content.append(text)
-                    elif ocr_api:
-                        ocr_result = Picture(picture_path).get_ocr_result(ocr_api)
-                        content.append(ocr_result)
                 else:
-                    if run_test and annot_count > 2:
-                        continue
-                    content = [annot.info.get("content")]
-                    if annot_type in [8, 9, 10, 11]:
-                        text = self._extract_rectangle_text(annot.rect, word_list)
-                        content.append(text)
+                    picture_path = ""
+                text = annot_handler.get_text(word_list, picture_path, ocr_api)
                 annot_list.append(
                     {
-                        "type": annot.type[1],
+                        "type": annot_handler.type_id,
                         "page": page_num,
-                        "content": content,
+                        "content": annot_handler.content,
+                        "text": text,
                         "id": annot_id,
-                        "height": height,
-                        "color": color,
+                        "height": annot_handler.height,
+                        "color": annot_handler.color,
+                        "pic": picture_path,
                     }
                 )
                 annot_num += 1
                 annot_count += 1
         return annot_list
-
-    def _extend_ink_annot_clip(self, annot, page):
-        return fitz.Rect(0, annot.rect.y0, page.mediabox.x1, annot.rect.y1)
 
     def format_annots(
         self,
@@ -197,41 +154,42 @@ class PdfHelper(object):
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             page = item.get("page")
-            content = item.get("content")
-            if item.get("type") == "toc":
+            content = item.get("content").strip()
+            item_type = item.get("type")
+            if item_type == "toc":
                 level = item.get("depth")
                 string = ("{indent}- " + toc_list_item_format).format(
                     indent=(level - 1) * 2 * " ",
                     checkbox="[ ]",
-                    title=content[0].strip(),
+                    title=content,
                     link="[[{}:{}::{}][{}]]".format(
                         "pdf",
                         self.path,
                         page,
-                        content[0].strip(),
+                        content,
                     ),
                 )
             else:  # note
-                annot_type = item.get("type")
+                pic_path = item.get("pic")
+                annot_id = item.get("id")
+                text = item.get("text")
                 string = ("{indent}- " + annot_list_item_format).format(
                     indent=(level) * 2 * " ",
                     checkbox="[ ]",
                     color=item.get("color"),
-                    annot_id=item.get("id"),
+                    annot_id=annot_id,
                     link="[[{}:{}::{}++{:.2f}][{}]]".format(
                         "pdf",
                         self.path,
                         page,
                         item.get("height"),
-                        item.get("id"),
+                        annot_id,
                     ),
-                    content=f"[[file:{content[0]}]]"
-                    if annot_type in ["Square", "Ink"]
-                    else content[0],
+                    content=f"[[file:{pic_path}]]" if pic_path else content,
                 )
-                if len(content) > 1 and content[1]:  # add multiline text in quote block
+                if text:  # add multiline text in quote block
                     string += "\n" + (level + 1) * 2 * " " + "#+begin_quote\n"
-                    string += content[1]
+                    string += text
                     string += "\n" + (level + 1) * 2 * " " + "#+end_quote"
             results_strs.append(string)
         if not output_file:
@@ -239,11 +197,6 @@ class PdfHelper(object):
             return
         with open(output_file, "w") as data:
             print("\n".join(results_strs), file=data)
-
-    def _extract_rectangle_text(self, rect: fitz.Rect, wordlist):
-        words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
-        sentence = " ".join(w[4] for w in words)
-        return sentence.strip()
 
     def extract_toc_from_text(self):
         toc = []
@@ -260,8 +213,72 @@ class PdfHelper(object):
     def toc_dict(self):
         toc = self.doc.get_toc()
         return [
-            {"type": "toc", "depth": x[0], "content": [x[1]], "page": x[2]} for x in toc
+            {"type": "toc", "depth": x[0], "content": x[1], "page": x[2]} for x in toc
         ]
+
+
+class AnnotationHandler(object):
+    def __init__(self, annot):
+        self.annot = annot
+        self.page = annot.parent
+        self.pdf_path = self.page.parent.name
+
+    @property
+    def color(self):
+        return RGB(self.annot.colors.get("stroke")).to_hex()
+
+    @property
+    def height(self):
+        return self.annot.rect.y0 / self.page.rect.y1
+
+    @property
+    def type_id(self):
+        return self.annot.type[0]
+
+    @property
+    def type_name(self):
+        return self.annot.type[1]
+
+    @property
+    def content(self):
+        return self.annot.info.get("content")
+
+    @property
+    def rect(self) -> fitz.Rect:
+        if self.type_id == SQUARE:
+            return self.annot.rect
+        elif self.type_id in [INK, LINE]:
+            page_width = self.page.mediabox.x1
+            return fitz.Rect(0, self.annot.rect.y0, page_width, self.annot.rect.y1)
+        elif self.type_id in [HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
+            points = self.annot.vertices  # TODO
+            return fitz.Quad(points).rect
+        else:
+            return fitz.Rect()
+
+    def save_pic(self, picture_path, zoom):
+        if self.type_id in [SQUARE, INK, LINE]:
+            export_picture_with_annot = (
+                False if self.type_id == SQUARE else True
+            )  # TODO maybe let user customize this?
+            pix = self.page.get_pixmap(
+                annots=export_picture_with_annot,
+                clip=self.rect,
+                matrix=fitz.Matrix(zoom, zoom),  # zoom image
+            )
+            pix.writePNG(picture_path)
+            return 1
+        return 0
+
+    def get_text(self, wordlist, picture_path, ocr_api):
+        text = ""
+        if self.type_id in [SQUARE, INK, LINE, HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
+            text = extract_rectangle_text(self.rect, wordlist)
+        if text:
+            return text
+        elif picture_path and ocr_api:
+            return Picture(picture_path).get_ocr_result(ocr_api)
+        return ""
 
 
 class RGB(object):
@@ -277,6 +294,12 @@ class RGB(object):
 
     def _int2hex(self, x: int):
         return hex(x).replace("x", "0")[-2:]
+
+
+def extract_rectangle_text(rect: fitz.Rect, wordlist):
+    words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
+    sentence = " ".join(w[4] for w in words)
+    return sentence.strip()
 
 
 def is_toc_item(text: str):
