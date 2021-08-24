@@ -309,6 +309,33 @@ def is_toc_item(text: str):
         return True
     return False
 
+def pic2pdf(image_dir: str, pdf_path: str):
+    doc = fitz.open()
+    toc = []
+    level = 0
+    page = 0
+    for root, subdirs, files in os.walk(image_dir):
+        level += 1
+        folder_toc_added = False
+        for filepath in images_to_open(files):
+            page += 1
+            if not folder_toc_added:
+                toc.append([level-1, root.replace(image_dir, "").replace("/", ""), page])
+                folder_toc_added = True
+            imgdoc = fitz.open(os.path.join(root, filepath))         # 打开图片
+            pdfbytes = imgdoc.convertToPDF()    # 使用图片创建单页的 PDF
+            imgpdf = fitz.open("pdf", pdfbytes)
+            doc.insertPDF(imgpdf) # 将当前页插入文档
+            file_name = os.path.splitext(filepath)[0]
+            toc.append([level, file_name, page])
+    if os.path.exists(pdf_path):
+        os.remove(pdf_path)
+    doc.set_toc(toc)
+    doc.save(pdf_path, garbage=2)
+    doc.close()
+
+def images_to_open(file_names: list):
+    return sorted([x for x in file_names if "png" in x or "jpg" in x])
 
 if __name__ == "__main__":
     path = "/Users/yuchen/Books/Louis Rosenfeld/Xin Xi Jia Gou (10469)/Xin Xi Jia Gou - Louis Rosenfeld.pdf"
