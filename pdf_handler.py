@@ -312,22 +312,22 @@ def is_toc_item(text: str):
 def pic2pdf(image_dir: str, pdf_path: str):
     doc = fitz.open()
     toc = []
-    level = 0
     page = 0
-    for root, subdirs, files in os.walk(image_dir):
-        level += 1
+    initial_depth = image_dir.count(os.sep)
+    for root, sub_dirs, files in os.walk(image_dir):
+        sub_dirs.sort()
         folder_toc_added = False
-        for filepath in images_to_open(files):
+        depth = root.count(os.sep) - initial_depth
+        for file in images_to_open(files):
             page += 1
             if not folder_toc_added:
-                toc.append([level-1, root.replace(image_dir, "").replace("/", ""), page])
+                toc.append([depth, os.path.split(root)[1], page])
                 folder_toc_added = True
-            imgdoc = fitz.open(os.path.join(root, filepath))         # 打开图片
-            pdfbytes = imgdoc.convertToPDF()    # 使用图片创建单页的 PDF
-            imgpdf = fitz.open("pdf", pdfbytes)
-            doc.insertPDF(imgpdf) # 将当前页插入文档
-            file_name = os.path.splitext(filepath)[0]
-            toc.append([level, file_name, page])
+            img_doc = fitz.open(os.path.join(root, file))
+            img_pdf = fitz.open("pdf", img_doc.convertToPDF())
+            doc.insertPDF(img_pdf)
+            file_name = os.path.splitext(file)[0]
+            toc.append([depth+1, file_name, page])
     if os.path.exists(pdf_path):
         os.remove(pdf_path)
     doc.set_toc(toc)
