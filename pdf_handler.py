@@ -145,14 +145,14 @@ class PdfHelper(object):
         level = 0
         if with_toc:
             results_items.extend(self.toc_dict)
-        results_items.extend(
-            self._get_annots(
+        annots = self._get_annots(
                 annot_image_dir=annot_image_dir,
                 ocr_api=ocr_api,
                 zoom=zoom,
                 run_test=run_test,
             )
-        )
+        if annots:
+            results_items.extend(annots)
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             page = item.get("page")
