@@ -3,6 +3,7 @@
 import re
 import os
 import sys
+from typing import List
 from operator import itemgetter
 
 import fitz
@@ -246,17 +247,18 @@ class AnnotationHandler(object):
         return self.annot.info.get("content")
 
     @property
-    def rect(self) -> fitz.Rect:
+    def rect_list(self) -> List[fitz.Rect]:
         if self.type_id == SQUARE:
-            return self.annot.rect
+            return [self.annot.rect]
         elif self.type_id in [INK, LINE]:
             page_width = self.page.mediabox.x1
-            return fitz.Rect(0, self.annot.rect.y0, page_width, self.annot.rect.y1)
+            return [fitz.Rect(0, self.annot.rect.y0, page_width, self.annot.rect.y1)]
         elif self.type_id in [HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
-            points = self.annot.vertices  # TODO
-            return fitz.Quad(points).rect
+            points = self.annot.vertices
+            quad_count = int(len(points) / 4)
+            return [fitz.Quad(points[i * 4: i * 4 + 4]).rect for i in range(quad_count)]
         else:
-            return fitz.Rect()
+            return [fitz.Rect()]
 
     def save_pic(self, picture_path, zoom):
         if self.type_id in [SQUARE, INK, LINE]:
@@ -265,7 +267,7 @@ class AnnotationHandler(object):
             )  # TODO maybe let user customize this?
             pix = self.page.get_pixmap(
                 annots=export_picture_with_annot,
-                clip=self.rect,
+                clip=self.rect_list[0],
                 matrix=fitz.Matrix(zoom, zoom),  # zoom image
             )
             pix.writePNG(picture_path)
@@ -275,7 +277,7 @@ class AnnotationHandler(object):
     def get_text(self, wordlist, picture_path, ocr_api):
         text = ""
         if self.type_id in [SQUARE, INK, LINE, HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
-            text = extract_rectangle_text(self.rect, wordlist)
+            text = extract_rectangle_list_text(self.rect_list, wordlist)
         if text:
             return text
         elif picture_path and ocr_api:
@@ -296,6 +298,13 @@ class RGB(object):
 
     def _int2hex(self, x: int):
         return hex(x).replace("x", "0")[-2:]
+
+def extract_rectangle_list_text(rect_list: List[fitz.Rect], wordlist):
+    sentences = []
+    for rect in rect_list:
+        sentence = extract_rectangle_text(rect, wordlist)
+        sentences.append(sentence)
+    return " ".join(sentences)
 
 
 def extract_rectangle_text(rect: fitz.Rect, wordlist):
