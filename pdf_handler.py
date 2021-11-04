@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 
 import re
 import os
 import sys
 from typing import List
 from operator import itemgetter
+import requests
+from bs4 import BeautifulSoup
 
 import fitz
 
@@ -18,6 +22,17 @@ UNDERLINE = 9
 SQUIGGLY = 10
 STRIKEOUT = 11
 INK = 15
+ANNOT_TYPES = [0, 4,6, 8, 9, 10, 11]
+
+PYMUPDF_ANNOT_MAPPING = {
+    0: "Text",
+    4: "Square",
+    6: "Polygon",
+    8: "Highlight",
+    9: "Underline",
+    10: "Squiggly",
+    11: "StrikeOut",
+}
 
 
 class PdfHelper(object):
@@ -90,9 +105,9 @@ class PdfHelper(object):
         zoom: int = 4,  # image zoom factor
         run_test: bool = False,  # get 3 annot and 3 pic at most
     ):
-        if not self.doc.has_annots():
-            return
         annot_list = []
+        if not self.doc.has_annots():
+            return annot_list
         annot_count = 0
         extracted_pic_count = 0
         for page in self.doc.pages():
