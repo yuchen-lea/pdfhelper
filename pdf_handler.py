@@ -5,6 +5,8 @@
 import re
 import os
 from operator import itemgetter
+from typing import List
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -54,6 +56,34 @@ class PdfHelper(object):
     def toc_text(self, toc: list):
         contents = [f"{(x[0] - 1) * 2 * ' '}- {x[1].strip()}#{x[2]}" for x in toc]
         return "\n".join(contents)
+
+    def import_toc_url(self,url):
+        """从ChinaPub链接导入目录"""
+        res=requests.get(url)
+        content=res.content
+        soup=BeautifulSoup(content,'lxml')
+        ml=soup.select('#ml + div')[0]
+        ml_txt=ml.text
+        mls=ml_txt.split('\n')
+        ml_outs=[]
+        for ml in mls:
+            m=ml.strip()
+            ml_index=re.search('[1-9]\d*$',m)
+            if ml_index is not None:
+                ml_index=ml_index.span()
+                m_list=list(m)
+                m_list.insert(ml_index[0],'#')
+                m_out=''.join(m_list)
+                ml_outs.append('- '+m_out)
+                ml_outs.append('\n')
+        print(ml_outs)
+        # 保存到临时文件
+        temp_path='/tmp/aa.org'
+        with open(temp_path,'w') as f:
+            f.writelines(ml_outs)
+
+        self.import_toc_from_file(temp_path)
+
 
     def import_toc_from_file(self, toc_path):
         with open(toc_path, "r") as data:
