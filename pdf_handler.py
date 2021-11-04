@@ -4,8 +4,6 @@
 
 import re
 import os
-import sys
-from typing import List
 from operator import itemgetter
 import requests
 from bs4 import BeautifulSoup
@@ -362,9 +360,6 @@ def images_to_open(file_names: list):
     return sorted([x for x in file_names if "png" in x or "jpg" in x])
 
 if __name__ == "__main__":
-    path = "/Users/yuchen/Books/Louis Rosenfeld/Xin Xi Jia Gou (10469)/Xin Xi Jia Gou - Louis Rosenfeld.pdf"
+    path = ""
     ocr_api = "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
-    PdfHelper(path).format_annots(
-        annot_image_dir="",
-        ocr_api="http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile",
-    )
+    PdfHelper(path).import_toc_url('http://product.china-pub.com/8081279')
