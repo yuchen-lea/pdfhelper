@@ -48,12 +48,13 @@ class PdfHelper(object):
             toc = []
             page_gap = 0
             for line in lines:
-                page_match = re.match(r"( *)[-+] (.+)#(\d+)", line)
+                page_match = re.match(r"( *)[-+] (.+)#(\d+) *", line)
+                toc_without_page_match = re.match(r"( *)[-+] ([^#]+) *", line)
                 gap_match = re.match(r"# *\+(\d+)", line)
                 first_page_match = re.match(r"#.+= *(\d+)", line)
                 indent_step = 2
-                if page_match:
-                    current_indent = len(page_match.group(1))
+                if page_match or toc_without_page_match:
+                    current_indent = len(page_match.group(1)) if page_match else len(toc_without_page_match.group(1))
                     if current_indent:
                         # NOTE No indentation in first row,
                         # run into this part after lvl assigned
@@ -64,8 +65,8 @@ class PdfHelper(object):
                             lvl -= int((last_indent - current_indent) / indent_step)
                     else:
                         lvl = 1
-                    title = page_match.group(2)
-                    page = int(page_match.group(3)) + page_gap
+                    title = page_match.group(2) if page_match else toc_without_page_match.group(2)
+                    page = int(page_match.group(3)) + page_gap if page_match else -1
                     toc.append([lvl, title, page])
                     last_indent = current_indent
                 elif first_page_match:
