@@ -50,7 +50,7 @@ class PdfHelper(object):
             for line in lines:
                 page_match = re.match(r"( *)[-+] (.+)#(\d+) *", line)
                 toc_without_page_match = re.match(r"( *)[-+] ([^#]+) *", line)
-                gap_match = re.match(r"# *\+(\d+)", line)
+                gap_match = re.match(r"# *([\+\-]\d+)", line)
                 first_page_match = re.match(r"#.+= *(\d+)", line)
                 indent_step = 2
                 if page_match or toc_without_page_match:
@@ -72,7 +72,7 @@ class PdfHelper(object):
                 elif first_page_match:
                     page_gap += int(first_page_match.group(1)) - 1
                 elif gap_match:
-                    page_gap -= int(gap_match.group(1))
+                    page_gap -= int(gap_match.group(1).replace(" ", ""))
                 else:
                     if line.strip():
                         raise ("Unsuppoted Format!")
