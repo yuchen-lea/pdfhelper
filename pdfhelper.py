@@ -28,6 +28,13 @@ def create_argparser():
         help="load TOC_PATH into INFILE and update the pdf file.",
         action="store_true",
     )
+
+    group_toc.add_argument(
+        "--import-toc-url",
+        "-til",
+        help="load TOC form url  into INFILE and update the pdf file.",
+    )
+
     group_toc.add_argument(
         "--export-toc",
         "-te",
@@ -95,7 +102,9 @@ def main(args):
     if args.export_toc:
         pdf.export_toc(toc_path)
     if args.import_toc:
-        pdf.import_toc_from_file(toc_path)
+        pdf.import_toc(toc_path)
+    if args.import_toc_url:
+        pdf.import_toc_url(args.import_toc_url)
     if args.export_annot:
         pdf.format_annots(
             annot_image_dir=args.annot_image_dir,

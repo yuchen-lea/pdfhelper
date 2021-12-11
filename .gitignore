@@ -1,1 +1,4 @@
-/ocr_config.ini
+.vscode
+__pycache__
+.idea
+ocr_config.ini

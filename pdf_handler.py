@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 
 import re
 import os
-import sys
-from typing import List
 from operator import itemgetter
+from typing import List
+
+import requests
+from bs4 import BeautifulSoup
 
 import fitz
 
@@ -18,6 +22,17 @@ UNDERLINE = 9
 SQUIGGLY = 10
 STRIKEOUT = 11
 INK = 15
+ANNOT_TYPES = [0, 4, 6, 8, 9, 10, 11]
+
+PYMUPDF_ANNOT_MAPPING = {
+    0: "Text",
+    4: "Square",
+    6: "Polygon",
+    8: "Highlight",
+    9: "Underline",
+    10: "Squiggly",
+    11: "StrikeOut",
+}
 
 
 class PdfHelper(object):
@@ -41,6 +56,33 @@ class PdfHelper(object):
     def toc_text(self, toc: list):
         contents = [f"{(x[0] - 1) * 2 * ' '}- {x[1].strip()}#{x[2]}" for x in toc]
         return "\n".join(contents)
+
+    def import_toc_url(self, url):
+        """从ChinaPub链接导入目录"""
+        res = requests.get(url)
+        content = res.content
+        soup = BeautifulSoup(content, "lxml")
+        ml = soup.select("#ml + div")[0]
+        ml_txt = ml.text
+        mls = ml_txt.split("\n")
+        ml_outs = []
+        for ml in mls:
+            m = ml.strip()
+            ml_index = re.search("[1-9]\d*$", m)
+            if ml_index is not None:
+                ml_index = ml_index.span()
+                m_list = list(m)
+                m_list.insert(ml_index[0], "#")
+                m_out = "".join(m_list)
+                ml_outs.append("- " + m_out)
+                ml_outs.append("\n")
+        print(ml_outs)
+        # 保存到临时文件
+        temp_path = "/tmp/aa.org"
+        with open(temp_path, "w") as f:
+            f.writelines(ml_outs)
+
+        self.import_toc_from_file(temp_path)
 
     def import_toc_from_file(self, toc_path):
         with open(toc_path, "r") as data:
@@ -100,9 +142,9 @@ class PdfHelper(object):
         zoom: int = 4,  # image zoom factor
         run_test: bool = False,  # get 3 annot and 3 pic at most
     ):
-        if not self.doc.has_annots():
-            return
         annot_list = []
+        if not self.doc.has_annots():
+            return annot_list
         annot_count = 0
         extracted_pic_count = 0
         for page in self.doc.pages():
@@ -380,7 +422,6 @@ def images_to_open(file_names: list):
 
 
 if __name__ == "__main__":
-    path = "/Users/yuchen/Books/Wei Zhi/MyMathG2 (12506)/MyMathG2 - Wei Zhi.pdf"
-    PdfHelper(path).import_toc_from_file(
-        "/var/folders/1_/xvxlsyn97mz30w_mlf08q7n00000gp/T/toc.org"
-    )
+    path = ""
+    ocr_api = "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
+    PdfHelper(path).import_toc_url("http://product.china-pub.com/8081279")
