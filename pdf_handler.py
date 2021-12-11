@@ -54,7 +54,11 @@ class PdfHelper(object):
                 first_page_match = re.match(r"#.+= *(\d+)", line)
                 indent_step = 2
                 if page_match or toc_without_page_match:
-                    current_indent = len(page_match.group(1)) if page_match else len(toc_without_page_match.group(1))
+                    current_indent = (
+                        len(page_match.group(1))
+                        if page_match
+                        else len(toc_without_page_match.group(1))
+                    )
                     if current_indent:
                         # NOTE No indentation in first row,
                         # run into this part after lvl assigned
@@ -65,7 +69,11 @@ class PdfHelper(object):
                             lvl -= int((last_indent - current_indent) / indent_step)
                     else:
                         lvl = 1
-                    title = page_match.group(2) if page_match else toc_without_page_match.group(2)
+                    title = (
+                        page_match.group(2)
+                        if page_match
+                        else toc_without_page_match.group(2)
+                    )
                     page = int(page_match.group(3)) + page_gap if page_match else -1
                     toc.append([lvl, title, page])
                     last_indent = current_indent
@@ -265,7 +273,9 @@ class AnnotationHandler(object):
         elif self.type_id in [HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
             points = self.annot.vertices
             quad_count = int(len(points) / 4)
-            return [fitz.Quad(points[i * 4: i * 4 + 4]).rect for i in range(quad_count)]
+            return [
+                fitz.Quad(points[i * 4 : i * 4 + 4]).rect for i in range(quad_count)
+            ]
         else:
             return [fitz.Rect()]
 
@@ -318,6 +328,7 @@ class RGB(object):
     def _int2hex(self, x: int):
         return hex(x).replace("x", "0")[-2:]
 
+
 def extract_rectangle_list_text(rect_list: List[fitz.Rect], wordlist):
     sentences = []
     for rect in rect_list:
@@ -337,6 +348,7 @@ def is_toc_item(text: str):
         return True
     return False
 
+
 def pic2pdf(image_dir: str, pdf_path: str):
     doc = fitz.open()
     toc = []
@@ -355,20 +367,20 @@ def pic2pdf(image_dir: str, pdf_path: str):
             img_pdf = fitz.open("pdf", img_doc.convertToPDF())
             doc.insertPDF(img_pdf)
             file_name = os.path.splitext(file)[0]
-            toc.append([depth+1, file_name, page])
+            toc.append([depth + 1, file_name, page])
     if os.path.exists(pdf_path):
         os.remove(pdf_path)
     doc.set_toc(toc)
     doc.save(pdf_path, garbage=2)
     doc.close()
 
+
 def images_to_open(file_names: list):
     return sorted([x for x in file_names if "png" in x or "jpg" in x])
 
+
 if __name__ == "__main__":
-    path = "/Users/yuchen/Books/Louis Rosenfeld/Xin Xi Jia Gou (10469)/Xin Xi Jia Gou - Louis Rosenfeld.pdf"
-    ocr_api = "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
-    PdfHelper(path).format_annots(
-        annot_image_dir="",
-        ocr_api="http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile",
+    path = "/Users/yuchen/Books/Wei Zhi/MyMathG2 (12506)/MyMathG2 - Wei Zhi.pdf"
+    PdfHelper(path).import_toc_from_file(
+        "/var/folders/1_/xvxlsyn97mz30w_mlf08q7n00000gp/T/toc.org"
     )

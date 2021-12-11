@@ -112,5 +112,13 @@ def main(args):
 
 if __name__ == "__main__":
     parser = create_argparser()
+    # args = parser.parse_args(
+    #     [
+    #         "/Users/yuchen/Books/Wei Zhi/MyMathG2 (12506)/MyMathG2 - Wei Zhi.pdf",
+    #         "-ti",
+    #         "--toc-path",
+    #         "/var/folders/1_/xvxlsyn97mz30w_mlf08q7n00000gp/T/toc.org",
+    #     ]
+    # )
     args = parser.parse_args()
     main(args)
