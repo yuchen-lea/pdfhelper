@@ -345,4 +345,4 @@ def images_to_open(file_names: list):
 if __name__ == "__main__":
     path = ""
     ocr_api = "http://198.18.0.153:8865/predict/chinese_ocr_db_crnn_mobile"
-    PdfHelper(path).import_toc_url("http://product.china-pub.com/8081279")
+    PdfHelper(path).import_toc_from_url("http://product.china-pub.com/8081279")
