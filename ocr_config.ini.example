@@ -1,0 +1,8 @@
+[paddle]
+url = http://<your-host>/predict/chinese_ocr_db_crnn_mobile
+
+
+[ocrspace]
+url = https://api.ocr.space/parse/image
+key = <your-key>
+size_limit = 1MB
