@@ -7,12 +7,10 @@ import os
 from operator import itemgetter
 from typing import List
 
-import requests
-from bs4 import BeautifulSoup
-
 import fitz
 
 from picture_handler import Picture
+from toc_handler import TocHandler
 
 TEXT = 0
 LINE = 3
@@ -22,7 +20,6 @@ UNDERLINE = 9
 SQUIGGLY = 10
 STRIKEOUT = 11
 INK = 15
-ANNOT_TYPES = [0, 4, 6, 8, 9, 10, 11]
 
 PYMUPDF_ANNOT_MAPPING = {
     0: "Text",
@@ -43,89 +40,17 @@ class PdfHelper(object):
 
     def export_toc(self, toc_path: str = ""):
         toc = self.doc.get_toc()
-        toc_text = self.toc_text(toc)
-        if not toc_path:
-            print(toc_text)
-            return
-        try:
-            with open(toc_path, "w") as data:
-                print(toc_text, file=data)
-        except IOError as ioerr:
-            print("File Error: " + str(ioerr))
+        TocHandler().save_pymupdf_toc_to_file(pymupdf_toc=toc, toc_path=toc_path)
 
-    def toc_text(self, toc: list):
-        contents = [f"{(x[0] - 1) * 2 * ' '}- {x[1].strip()}#{x[2]}" for x in toc]
-        return "\n".join(contents)
-
-    def import_toc_url(self, url):
-        """从ChinaPub链接导入目录"""
-        res = requests.get(url)
-        content = res.content
-        soup = BeautifulSoup(content, "lxml")
-        ml = soup.select("#ml + div")[0]
-        ml_txt = ml.text
-        mls = ml_txt.split("\n")
-        ml_outs = []
-        for ml in mls:
-            m = ml.strip()
-            ml_index = re.search("[1-9]\d*$", m)
-            if ml_index is not None:
-                ml_index = ml_index.span()
-                m_list = list(m)
-                m_list.insert(ml_index[0], "#")
-                m_out = "".join(m_list)
-                ml_outs.append("- " + m_out)
-                ml_outs.append("\n")
-        print(ml_outs)
-        # 保存到临时文件
-        temp_path = "/tmp/aa.org"
-        with open(temp_path, "w") as f:
-            f.writelines(ml_outs)
-
-        self.import_toc_from_file(temp_path)
+    def import_toc_from_url(self, url: str):
+        toc_list = TocHandler().get_toc_list_from_chinapub(url=url)
+        toc = TocHandler().convert_toc_list_to_pymupdf_toc(toc_list=toc_list)
+        self.save_toc(toc)
 
     def import_toc_from_file(self, toc_path):
         with open(toc_path, "r") as data:
             lines = data.readlines()
-            toc = []
-            page_gap = 0
-            for line in lines:
-                page_match = re.match(r"( *)[-+] (.+)#(\d+) *", line)
-                toc_without_page_match = re.match(r"( *)[-+] ([^#]+) *", line)
-                gap_match = re.match(r"# *([\+\-]\d+)", line)
-                first_page_match = re.match(r"#.+= *(\d+)", line)
-                indent_step = 2
-                if page_match or toc_without_page_match:
-                    current_indent = (
-                        len(page_match.group(1))
-                        if page_match
-                        else len(toc_without_page_match.group(1))
-                    )
-                    if current_indent:
-                        # NOTE No indentation in first row,
-                        # run into this part after lvl assigned
-                        if current_indent > last_indent:
-                            lvl += 1
-                            indent_step = current_indent - last_indent
-                        elif current_indent < last_indent:
-                            lvl -= int((last_indent - current_indent) / indent_step)
-                    else:
-                        lvl = 1
-                    title = (
-                        page_match.group(2)
-                        if page_match
-                        else toc_without_page_match.group(2)
-                    )
-                    page = int(page_match.group(3)) + page_gap if page_match else -1
-                    toc.append([lvl, title, page])
-                    last_indent = current_indent
-                elif first_page_match:
-                    page_gap += int(first_page_match.group(1)) - 1
-                elif gap_match:
-                    page_gap -= int(gap_match.group(1).replace(" ", ""))
-                else:
-                    if line.strip():
-                        raise ("Unsuppoted Format!")
+            toc = TocHandler().convert_toc_list_to_pymupdf_toc(toc_list=lines)
             self.save_toc(toc)
 
     def save_toc(self, toc: list):
@@ -265,7 +190,9 @@ class PdfHelper(object):
         for num in range(self.doc.page_count):
             page = self.doc.load_page(num)
             text = page.get_text()
-            toc_item = [line for line in text.split("\n") if is_toc_item(line)]
+            toc_item = [
+                line for line in text.split("\n") if TocHandler().is_toc_item(line)
+            ]
             if len(toc_item) < 5:
                 toc.extend([[1, x, num + 1] for x in toc_item])
         print(self.toc_text(toc))
@@ -383,12 +310,6 @@ def extract_rectangle_text(rect: fitz.Rect, wordlist):
     words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
     sentence = " ".join(w[4] for w in words)
     return sentence.strip()
-
-
-def is_toc_item(text: str):
-    if re.match(r"^第 \d+ 章.+", text):
-        return True
-    return False
 
 
 def pic2pdf(image_dir: str, pdf_path: str):
