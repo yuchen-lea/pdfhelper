@@ -95,3 +95,38 @@ class TocHandler:
         if re.match(r"^第 \d+ 章.+", text):
             return True
         return False
+
+
+def create_argparser():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument(
+        "--book-url",
+        help="Book url to get toc list",
+    )
+    p.add_argument(
+        "--toc-path",
+        help="toc file path",
+    )
+
+    return p
+
+
+def main(args):
+    url = args.book_url
+    toc_path = args.toc_path
+    TocHandler().save_toc_to_file_from_url(url=url, toc_path=toc_path)
+
+
+if __name__ == "__main__":
+    parser = create_argparser()
+    # args = parser.parse_args(
+    #     [
+    #         "/Users/yuchen/Notes/imgs/2021-12-11_10-51-25_screenshot.png",
+    #         "--ocr-service",
+    #         "ocrspace",
+    #         "--language",
+    #         Language.Chinese_Traditional,
+    #     ]
+    # )
+    args = parser.parse_args()
+    main(args)
