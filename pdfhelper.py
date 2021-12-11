@@ -8,6 +8,7 @@ import sys
 
 
 from pdf_handler import PdfHelper
+from picture_handler import help_text_for_ocr_language, help_text_for_ocr_service
 
 
 def create_argparser():
@@ -48,8 +49,12 @@ def create_argparser():
         default="",
     )
     group_annot.add_argument(
-        "--ocr-api",
-        help="paddle OCR API. When set, ocr the picture and insert the result",
+        "--ocr-service",
+        help=help_text_for_ocr_service,
+    )
+    group_annot.add_argument(
+        "--ocr-language",
+        help=help_text_for_ocr_language,
     )
     group_annot.add_argument(
         "--annot-path",
@@ -94,7 +99,8 @@ def main(args):
     if args.export_annot:
         pdf.format_annots(
             annot_image_dir=args.annot_image_dir,
-            ocr_api=args.ocr_api,
+            ocr_service=args.ocr_service,
+            ocr_language=args.ocr_language,
             output_file=args.annot_path,
             zoom=args.image_zoom,
             with_toc=args.with_toc,

@@ -87,7 +87,8 @@ class PdfHelper(object):
     def _get_annots(
         self,
         annot_image_dir: str = "",
-        ocr_api: str = "",
+        ocr_service: str = "",
+        ocr_language: str = "",
         zoom: int = 4,  # image zoom factor
         run_test: bool = False,  # get 3 annot and 3 pic at most
     ):
@@ -114,7 +115,12 @@ class PdfHelper(object):
                     extracted_pic_count += 1
                 else:
                     picture_path = ""
-                text = annot_handler.get_text(word_list, picture_path, ocr_api)
+                text = annot_handler.get_text(
+                    wordlist=word_list,
+                    picture_path=picture_path,
+                    ocr_service=ocr_service,
+                    ocr_language=ocr_language,
+                )
                 annot_list.append(
                     {
                         "type": annot_handler.type_id,
@@ -134,7 +140,8 @@ class PdfHelper(object):
     def format_annots(
         self,
         annot_image_dir: str = "",
-        ocr_api: str = "",
+        ocr_service: str = "",
+        ocr_language: str = "",
         output_file: str = "",
         zoom: int = 4,
         with_toc: bool = True,
@@ -148,11 +155,12 @@ class PdfHelper(object):
         if with_toc:
             results_items.extend(self.toc_dict)
         annots = self._get_annots(
-                annot_image_dir=annot_image_dir,
-                ocr_api=ocr_api,
-                zoom=zoom,
-                run_test=run_test,
-            )
+            annot_image_dir=annot_image_dir,
+            ocr_service=ocr_service,
+            ocr_language=ocr_language,
+            zoom=zoom,
+            run_test=run_test,
+        )
         if annots:
             results_items.extend(annots)
         results_items = sorted(results_items, key=itemgetter("page"))
@@ -275,14 +283,24 @@ class AnnotationHandler(object):
             return 1
         return 0
 
-    def get_text(self, wordlist, picture_path, ocr_api):
+    def get_text(self, wordlist, picture_path, ocr_service, ocr_language):
         text = ""
-        if self.type_id in [SQUARE, INK, LINE, HIGHLIGHT, UNDERLINE, SQUIGGLY, STRIKEOUT]:
+        if self.type_id in [
+            SQUARE,
+            INK,
+            LINE,
+            HIGHLIGHT,
+            UNDERLINE,
+            SQUIGGLY,
+            STRIKEOUT,
+        ]:
             text = extract_rectangle_list_text(self.rect_list, wordlist)
         if text:
             return text
-        elif picture_path and ocr_api:
-            return Picture(picture_path).get_ocr_result(ocr_api)
+        elif picture_path and ocr_service:
+            return Picture(picture_path).get_ocr_result(
+                ocr_service=ocr_service, language=ocr_language
+            )
         return ""
 
 
