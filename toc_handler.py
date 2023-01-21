@@ -52,7 +52,7 @@ class TocHandler:
         toc = []
         page_gap = 0
         for line in toc_list:
-            page_match = re.match(r"( *)[-+] (.+)#(\d+) *", line)
+            page_match = re.match(r"( *)[-+] (.+)# *(\d+) *", line)
             toc_without_page_match = re.match(r"( *)[-+] ([^#]+) *", line)
             gap_match = re.match(r"# *([\+\-]\d+)", line)
             first_page_match = re.match(r"#.+= *(\d+)", line)
