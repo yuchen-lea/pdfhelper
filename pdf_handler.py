@@ -56,8 +56,23 @@ class PdfHelper(object):
     def save_toc(self, toc: list):
         self.doc.set_toc(toc)
         temp_file_path = self.path + "2"
+
+    def save_doc(self, target: str = ""):
+        target_path = self._get_target_file_path(target=target, file_type="pdf")
+        temp_file_path = target_path + "2"
         self.doc.save(temp_file_path, garbage=2)
-        os.replace(temp_file_path, self.path)
+        os.replace(temp_file_path, target_path)
+
+    def _get_target_file_path(self, target, file_type):
+        """If target is a folder, return target/file_name.file_type;
+        If target is empty, return self.file_dir/file_name.file_type;
+        else return target
+        """
+        if target and not os.path.splitext(target)[-1]:  # target is a folder
+            if not os.path.exists(target):
+                os.mkdir(target)
+            target = os.path.join(target, f"{self.file_name}.{file_type}")
+        return target or os.path.join(self.file_dir, f"{self.file_name}.{file_type}")
 
     def _get_annots(
         self,
@@ -111,6 +126,14 @@ class PdfHelper(object):
                 annot_num += 1
                 annot_count += 1
         return annot_list
+
+    def delete_annots(self, target_path: str = ""):
+        if not self.doc.has_annots():
+            return
+        for page in self.doc.pages():
+            for annot in page.annots():
+                page.delete_annot(annot)
+        self.save_doc(target_path=target_path)
 
     def format_annots(
         self,

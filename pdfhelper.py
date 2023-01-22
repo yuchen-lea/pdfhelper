@@ -19,7 +19,11 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="1.3.0")
+    p.add_argument(
+        "--target",
+        help="TARGET could be a folder or a PDF file. If TARGET is ommited, update INFILE.",
+    )
+    p.add_argument("--version", "-v", action="version", version="1.4.0")
 
     group_toc = p.add_argument_group("Process TOC", "PDF TOC <-> Human readable List")
     group_toc.add_argument(
@@ -44,6 +48,13 @@ def create_argparser():
     group_toc.add_argument(
         "--toc-path",
         help="toc file path",
+    )
+
+    group_pdf = p.add_argument_group("Process PDF")
+    group_pdf.add_argument(
+        "--delete-annot",
+        help="delete annotations of INPUT and update the pdf file. If TARGET is set, save to TARGET.",
+        action="store_true",
     )
 
     group_annot = p.add_argument_group("Export Annots")
@@ -98,6 +109,7 @@ def create_argparser():
 def main(args):
     path = args.file.name
     toc_path = args.toc_path
+    target = args.target
     pdf = PdfHelper(path)
     if args.export_toc:
         pdf.export_toc(toc_path)
@@ -105,6 +117,8 @@ def main(args):
         pdf.import_toc_from_file(toc_path)
     if args.import_toc_url:
         pdf.import_toc_from_url(args.import_toc_url)
+    if args.delete_annot:
+        pdf.delete_annots(target_path=target)
     if args.export_annot:
         pdf.format_annots(
             annot_image_dir=args.annot_image_dir,
