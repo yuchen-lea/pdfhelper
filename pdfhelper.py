@@ -103,6 +103,18 @@ def create_argparser():
         help="run a test instead of extracting full annotations. useful for checking output format and image quality",
         action="store_true",
     )
+
+    group_annot = p.add_argument_group("PDF metadata")
+    group_annot.add_argument(
+        "--page-label-to-number",
+        metavar="PAGE_LABEL",
+        help="convert given page label to page number",
+    )
+    group_annot.add_argument(
+        "--page-number-to-label",
+        metavar="PAGE_NUMBER",
+        help="convert given page label to page number",
+    )
     return p
 
 
@@ -131,6 +143,10 @@ def main(args):
             annot_list_item_format=args.annot_list_item_format,
             run_test=args.run_test,
         )
+    if args.page_number_to_label:
+        pdf.get_page_label(number=args.page_number_to_label)
+    if args.page_label_to_number:
+        pdf.get_page_number(label=args.page_label_to_number)
 
 
 if __name__ == "__main__":

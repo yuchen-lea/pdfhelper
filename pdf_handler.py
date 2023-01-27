@@ -229,6 +229,19 @@ class PdfHelper(object):
         ]
 
 
+    def get_page_number(self, label):
+        page_index = self.doc.get_page_numbers(label=label)[0]
+        page_number = page_index + 1
+        print(page_number)
+        return page_number
+
+    def get_page_label(self, number):
+        page_index = int(number) - 1
+        page_label = self.doc.load_page(page_index).get_label() or str(number)
+        print(page_label)
+        return page_label
+
+
 class AnnotationHandler(object):
     def __init__(self, annot):
         self.annot = annot
