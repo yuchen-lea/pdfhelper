@@ -4,7 +4,6 @@
 Some useful functions to process a PDF file.
 """
 import argparse
-import sys
 
 
 from pdf_handler import PdfHelper
@@ -13,151 +12,143 @@ from picture_handler import help_text_for_ocr_language, help_text_for_ocr_servic
 
 def create_argparser():
     p = argparse.ArgumentParser(description=__doc__)
+    subparsers = p.add_subparsers(dest="command", required=True)
+
     p.add_argument(
-        "file",
-        metavar="INFILE",
+        "INFILE",
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument(
-        "--target",
-        help="TARGET could be a folder or a PDF file. If TARGET is ommited, update INFILE.",
-    )
-    p.add_argument("--version", "-v", action="version", version="1.4.0")
+    p.add_argument("--version", "-v", action="version", version="2.0.0")
 
-    group_toc = p.add_argument_group("Process TOC", "PDF TOC <-> Human readable List")
-    group_toc.add_argument(
-        "--import-toc",
-        "-ti",
-        help="load TOC_PATH into INFILE and update the pdf file.",
-        action="store_true",
+    # export-toc
+    parser_export_toc = subparsers.add_parser(
+        "export-toc", help="Export the TOC of the PDF."
     )
-
-    group_toc.add_argument(
-        "--import-toc-url",
-        "-til",
-        help="load TOC form url into INFILE and update the pdf file.",
+    parser_export_toc.add_argument(
+        "TOC_PATH",
+        nargs="?",
+        default="",
+        help="Path to save the TOC. Defaults to the folder where INFILE is located.",
     )
 
-    group_toc.add_argument(
-        "--export-toc",
-        "-te",
-        help="export the toc of INFILE to TOC_PATH. If TOC_PATH is not set, just print to stdout",
-        action="store_true",
+    # import-toc
+    parser_import_toc = subparsers.add_parser(
+        "import-toc", help="Import TOC from a file into the PDF."
     )
-    group_toc.add_argument(
-        "--toc-path",
-        help="toc file path",
+    parser_import_toc.add_argument(
+        "TOC_PATH", nargs="?", default="", help="file or url to load the TOC from."
     )
-
-    group_pdf = p.add_argument_group("Process PDF")
-    group_pdf.add_argument(
-        "--delete-annot",
-        help="delete annotations of INPUT and update the pdf file. If TARGET is set, save to TARGET.",
-        action="store_true",
+    parser_import_toc.add_argument(
+        "--target", help="Target PDF file or folder. Defaults to updating INFILE."
     )
 
-    group_annot = p.add_argument_group("Export Annots")
-    group_annot.add_argument(
-        "--export-annot", "-ae", help="export annotations of INPUT", action="store_true"
+    # delete-annot
+    parser_delete_annot = subparsers.add_parser(
+        "delete-annot", help="Delete annotations from the PDF."
     )
-    group_annot.add_argument(
-        "--annot-image-dir",
-        help="dir to save extracted pictures. when omitted, save to current working dir",
+    parser_delete_annot.add_argument(
+        "--target", help="Target PDF file or folder. Defaults to updating INFILE."
+    )
+
+    )
         default="",
     )
-    group_annot.add_argument(
-        "--ocr-service",
-        help=help_text_for_ocr_service,
+
+    # export-annot
+    parser_export_annot = subparsers.add_parser(
+        "export-annot", help="Export formatted text annotations of the PDF."
     )
-    group_annot.add_argument(
-        "--ocr-language",
-        help=help_text_for_ocr_language,
+    parser_export_annot.add_argument(
+        "ANNOT_PATH",
+        nargs="?",
+        default="",
+        help="File to save the exported annotations. When omitted, just print to stdout",
     )
-    group_annot.add_argument(
-        "--annot-path",
-        help="file to save the exported annotations. when omitted, just print to stdout",
+    parser_export_annot.add_argument(
+        "--annot-image-dir",
+        help="Dir to save extracted pictures. When omitted, save to current working dir",
+        default="",
     )
-    group_annot.add_argument(
-        "--image-zoom",
-        help="image zoom factor",
-        default=4,
+    parser_export_annot.add_argument("--ocr-service", help=help_text_for_ocr_service)
+    parser_export_annot.add_argument("--ocr-language", help=help_text_for_ocr_language)
+    parser_export_annot.add_argument(
+        "--image-zoom", help="Image zoom factor", default=4
     )
-    group_annot.add_argument(
+    parser_export_annot.add_argument(
         "--with-toc",
-        help="when set, the annotations are placed under corresponding outline items",
+        help="When set, the annotations are placed under corresponding outline items",
         action="store_true",
     )
-    group_annot.add_argument(
+    parser_export_annot.add_argument(
         "--toc-list-item-format",
-        help="customize the format of toc item when WITH_TOC, default is '{checkbox} {link}'. available fields: checkbox, link, title ",
+        help="Customize the format of toc item when WITH_TOC. Default is '{checkbox} {link}'. Available fields: checkbox, link, title",
         default="{checkbox} {link}",
     )
-    group_annot.add_argument(
+    parser_export_annot.add_argument(
         "--annot-list-item-format",
-        help="customize the format of annot item, default is '{checkbox} {color} {link} {content}'. available fields: checkbox, color, annot_id, link, content",
+        help="Customize the format of annot item. Default is '{checkbox} {color} {link} {content}'. Available fields: checkbox, color, annot_id, link, content",
         default="{checkbox} {color} {link} {content}",
     )
-    group_annot.add_argument(
+    parser_export_annot.add_argument(
         "--run-test",
-        help="run a test instead of extracting full annotations. useful for checking output format and image quality",
+        help="Run a test instead of extracting full annotations. Useful for checking output format and image quality",
         action="store_true",
     )
 
-    group_annot = p.add_argument_group("PDF metadata")
-    group_annot.add_argument(
-        "--page-label-to-number",
-        metavar="PAGE_LABEL",
-        help="convert given page label to page number",
+    # page-label-to-number
+    parser_page_label_to_number = subparsers.add_parser(
+        "page-label-to-number", help="Convert page label to page number."
     )
-    group_annot.add_argument(
-        "--page-number-to-label",
-        metavar="PAGE_NUMBER",
-        help="convert given page label to page number",
+    parser_page_label_to_number.add_argument(
+        "PAGE_LABEL", help="Page label to convert."
     )
+
+    # page-number-to-label
+    parser_page_number_to_label = subparsers.add_parser(
+        "page-number-to-label", help="Convert page number to page label."
+    )
+    parser_page_number_to_label.add_argument(
+        "PAGE_NUMBER", help="Page number to convert."
+    )
+
     return p
 
 
 def main(args):
-    path = args.file.name
-    toc_path = args.toc_path
-    target = args.target
+    path = args.INFILE.name
     pdf = PdfHelper(path)
-    if args.export_toc:
-        pdf.export_toc(toc_path)
-    if args.import_toc:
-        pdf.import_toc_from_file(toc_path)
-    if args.import_toc_url:
-        pdf.import_toc_from_url(args.import_toc_url)
-    if args.delete_annot:
-        pdf.delete_annots(target_path=target)
-    if args.export_annot:
+
+    if args.command == "export-toc":
+        pdf.export_toc(args.TOC_PATH)
+    elif args.command == "import-toc":
+        toc = args.TOC_PATH
+        target = args.target
+        if toc.startswith("http"):
+            pdf.import_toc_from_url(url=toc, target_pdf=target)
+        else:
+            pdf.import_toc_from_file(toc_path=toc, target_pdf=target)
+    elif args.command == "delete-annot":
+        pdf.delete_annots(target_path=args.target)
+    elif args.command == "export-annot":
         pdf.format_annots(
+            output_file=args.ANNOT_PATH,
             annot_image_dir=args.annot_image_dir,
             ocr_service=args.ocr_service,
             ocr_language=args.ocr_language,
-            output_file=args.annot_path,
             zoom=args.image_zoom,
             with_toc=args.with_toc,
             toc_list_item_format=args.toc_list_item_format,
             annot_list_item_format=args.annot_list_item_format,
             run_test=args.run_test,
         )
-    if args.page_number_to_label:
-        pdf.get_page_label(number=args.page_number_to_label)
-    if args.page_label_to_number:
-        pdf.get_page_number(label=args.page_label_to_number)
+    elif args.command == "page-label-to-number":
+        pdf.get_page_number(label=args.PAGE_LABEL)
+    elif args.command == "page-number-to-label":
+        pdf.get_page_label(number=args.PAGE_NUMBER)
 
 
 if __name__ == "__main__":
     parser = create_argparser()
-    # args = parser.parse_args(
-    #     [
-    #         "/Users/yuchen/Books/Wei Zhi/MyMathG2 (12506)/MyMathG2 - Wei Zhi.pdf",
-    #         "-ti",
-    #         "--toc-path",
-    #         "/var/folders/1_/xvxlsyn97mz30w_mlf08q7n00000gp/T/toc.org",
-    #     ]
-    # )
     args = parser.parse_args()
     main(args)
