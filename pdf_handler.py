@@ -412,8 +412,11 @@ class PdfHelper(object):
             self.save_doc(target=target_pdf)
 
     def get_page_number(self, label):
-        page_index = self.doc.get_page_numbers(label=label)[0]
-        page_number = page_index + 1
+        page_numbers = self.doc.get_page_numbers(label=label)
+        if len(page_numbers):
+            page_number = page_numbers[0] + 1
+        else:
+            page_number = label
         print(page_number)
         return page_number
 
