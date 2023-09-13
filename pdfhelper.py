@@ -19,7 +19,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.1.0")
+    p.add_argument("--version", "-v", action="version", version="2.2.0")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -60,6 +60,20 @@ def create_argparser():
         nargs="?",
         default="",
         help="Path to save the XFDF annotations.",
+    )
+
+    # import-xfdf-annot
+    parser_import_xfdf_annot = subparsers.add_parser(
+        "import-xfdf-annot", help="Import XFDF annotations of the PDF."
+    )
+    parser_import_xfdf_annot.add_argument(
+        "XFDF_ANNOT_PATH",
+        nargs="?",
+        default="",
+        help="Path to save the XFDF annotations.",
+    )
+    parser_import_xfdf_annot.add_argument(
+        "--target", help="Target PDF file or folder. Defaults to updating INFILE."
     )
 
     # export-annot
@@ -139,7 +153,10 @@ def main(args):
         pdf.delete_annots(target_path=args.target)
     elif args.command == "export-xfdf-annot":
         pdf.export_xfdf_annots(annot_file=args.XFDF_ANNOT_PATH)
-
+    elif args.command == "import-xfdf-annot":
+        pdf.import_xfdf_annots(
+            annot_file=args.XFDF_ANNOT_PATH, target_pdf=args.target, save_pdf=True
+        )
     elif args.command == "export-annot":
         pdf.format_annots(
             output_file=args.ANNOT_PATH,

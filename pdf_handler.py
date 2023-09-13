@@ -45,6 +45,11 @@ PYMUPDF_LINE_ENDING_STYLE_MAPPING = {
     9: "Slash",
 }
 
+PYMUPDF_LINE_ENDING_STYLE_REVERSE_MAPPING = {
+    v: k for k, v in PYMUPDF_LINE_ENDING_STYLE_MAPPING.items()
+}
+
+
 def is_annot_type_name_in_list(annot_type_name: str, annot_type_list: list[int]):
     annot_type_name_list = [
         PYMUPDF_ANNOT_TYPE_MAPPING[x].lower() for x in annot_type_list
@@ -346,6 +351,66 @@ class PdfHelper(object):
         tree = ET.ElementTree(root)
         tree.write(annot_file, encoding="utf-8", xml_declaration=True)
 
+    def import_xfdf_annots(
+        self, annot_file: str = "", target_pdf: str = "", save_pdf: bool = False
+    ):
+        tree = ET.parse(annot_file)
+        root = tree.getroot()
+        namespace = "{http://ns.adobe.com/xfdf/}"
+        annots = root.find(f"{namespace}annots")
+        if not annots:
+            raise Exception("Wrong Format")
+        for annot_tag in annots:
+            annot_tag_h = AnnotTagHandler(
+                annot_tag=annot_tag, namespace=namespace, pdf_handler=self
+            )
+            page = annot_tag_h.page
+            annot_tag_name = annot_tag_h.name
+
+            if is_annot_type_name_in_list(annot_tag_name, [HIGHLIGHT]):
+                annot = page.add_highlight_annot(quads=annot_tag_h.coords)
+            elif is_annot_type_name_in_list(annot_tag_name, [UNDERLINE]):
+                annot = page.add_underline_annot(quads=annot_tag_h.coords)
+            elif is_annot_type_name_in_list(annot_tag_name, [STRIKEOUT]):
+                annot = page.add_strikeout_annot(quads=annot_tag_h.coords)
+            elif is_annot_type_name_in_list(annot_tag_name, [SQUIGGLY]):
+                annot = page.add_squiggly_annot(quads=annot_tag_h.coords)
+            elif is_annot_type_name_in_list(annot_tag_name, [SQUARE]):
+                annot = page.add_rect_annot(annot_tag_h.rect())
+            elif is_annot_type_name_in_list(annot_tag_name, [TEXT]):
+                annot = page.add_text_annot(
+                    point=annot_tag_h.rect().tl,
+                    text=annot_tag_h.contents_text,
+                    icon=annot_tag.attrib.get("icon"),
+                )
+            elif is_annot_type_name_in_list(annot_tag_name, [INK]):
+                annot = page.add_ink_annot(annot_tag_h.ink_list)
+            elif is_annot_type_name_in_list(annot_tag_name, [LINE]):
+                annot = page.add_line_annot(
+                    annot_tag_h.get_line_ends_point(type="start"),
+                    annot_tag_h.get_line_ends_point(type="end"),
+                )
+                annot.set_line_ends(
+                    annot_tag_h.get_line_ends_type(type="head"),
+                    annot_tag_h.get_line_ends_type(type="tail"),
+                )
+            else:
+                raise Exception("Unsupported")
+
+            if not is_annot_type_name_in_list(
+                annot_tag_name, [HIGHLIGHT, STRIKEOUT, UNDERLINE, SQUIGGLY, TEXT]
+            ):
+                annot.set_border(border=annot_tag_h.border_dict)
+            annot.set_colors(colors=annot_tag_h.color_dict)
+            annot.set_info(info=annot_tag_h.attrs)
+            if annot_tag_h.has_popup():
+                annot.set_popup(annot_tag_h.rect(type="popup"))
+                annot.set_open(annot_tag_h.popup_open)
+            annot.update()
+
+        if save_pdf:
+            self.save_doc(target=target_pdf)
+
     def get_page_number(self, label):
         page_index = self.doc.get_page_numbers(label=label)[0]
         page_number = page_index + 1
@@ -357,6 +422,148 @@ class PdfHelper(object):
         page_label = self.doc.load_page(page_index).get_label() or str(number)
         print(page_label)
         return page_label
+
+
+class AnnotTagHandler(object):
+    def __init__(self, annot_tag, namespace, pdf_handler):
+        self.annot_tag = annot_tag
+        self.namespace = namespace
+        self.attrib = self.annot_tag.attrib
+        self.page = pdf_handler.doc.load_page(int(self.attrib.get("page")))
+        self.pymupdf_to_xfdf_mappings = pdf_handler.pymupdf_to_xfdf_mappings
+        self.page_height = self.page.rect.height
+
+    @property
+    def name(self):
+        return self.annot_tag.tag.replace(self.namespace, "")
+
+    @property
+    def attrs(self):
+        attrs = self.attrib
+        if self.contents_text:
+            attrs["content"] = self.contents_text
+        for new_key, old_key in self.pymupdf_to_xfdf_mappings:
+            if old_key in attrs:
+                attrs[new_key] = attrs[old_key]
+                del attrs[old_key]
+        return attrs
+
+    def rect(self, type: str = "default"):
+        rect_string = (
+            self.popup.attrib.get("rect")
+            if type == "popup"
+            else self.attrib.get("rect")
+        )
+        if rect_string:
+            rect = rect_string.split(",")
+            r = fitz.Rect(
+                (
+                    float(rect[0]),
+                    self.page_height - float(rect[3]),
+                    float(rect[2]),
+                    self.page_height - float(rect[1]),
+                )
+            )
+            return r
+        return None
+
+    @property
+    def coords(self):
+        coords_str = self.attrib.get("coords")
+        if coords_str:
+            coords_list = list(map(float, coords_str.split(",")))
+            vertices = []
+            for i in range(0, len(coords_list), 2):
+                x = coords_list[i]
+                y = self.page_height - coords_list[i + 1]
+                vertices.append((x, y))
+
+            quad_count = int(len(vertices) / 4)
+            return [
+                fitz.Quad(vertices[i * 4 : i * 4 + 4]).rect for i in range(quad_count)
+            ]
+        return None
+
+    @property
+    def contents_text(self):
+        if self.attrib.get("content"):
+            return self.attrib.get("content")
+        contents = self.annot_tag.find(f"{self.namespace}contents")
+        if isinstance(contents, ET.Element):
+            return contents.text
+        contents_richtext = self.annot_tag.find(f"{self.namespace}contents-richtext")
+        if isinstance(contents_richtext, ET.Element):
+            text_parts = [
+                part for part in contents_richtext.itertext() if part.strip() != ""
+            ]
+            return "\n".join(text_parts).strip()
+        return ""
+
+    @property
+    def ink_list(self):
+        gestures = self.annot_tag.find(f"{self.namespace}inklist").findall(
+            f"{self.namespace}gesture"
+        )
+        ink_list = []
+        for gesture in gestures:
+            points = gesture.text.split(";")
+            coords = [
+                (float(p.split(",")[0]), self.page_height - float(p.split(",")[1]))
+                for p in points
+            ]
+            ink_list.append(coords)
+        return ink_list
+
+    def get_line_ends_point(self, type):
+        x, y = self.attrib.get(type).split(",")
+        return fitz.Point((x, self.page_height - float(y)))
+
+    def get_line_ends_type(self, type):
+        return PYMUPDF_LINE_ENDING_STYLE_REVERSE_MAPPING.get(
+            self.attrib.get(type, ""), 0
+        )
+
+    @property
+    def border_dict(self):
+        border = {}
+        width = self.attrib.get("width")
+        if width:
+            border["width"] = float(width)
+        style = self.attrib.get("style")
+        if style == "dash":
+            dashes = self.attrib.get("dashes")
+            if dashes:
+                border["dashes"] = [int(x) for x in dashes.split(",")]
+        elif style == "cloudy":
+            intensity = self.attrib.get("intensity")
+            if intensity:
+                border["clouds"] = int(intensity)
+        return border
+
+    @property
+    def color_dict(self):
+        color = {}
+        stroke = self.attrib.get("color")
+        if stroke:
+            color["stroke"] = RGB(stroke).to_float()
+        fill = self.attrib.get("interior-color")
+        if fill:
+            color["fill"] = RGB(fill).to_float()
+        return color
+
+    def has_popup(self):
+        return isinstance(self.popup, ET.Element)
+
+    @property
+    def popup(self):
+        return self.annot_tag.find(f"{self.namespace}popup")
+
+    @property
+    def popup_open(self):
+        open = self.popup.attrib.get("open")
+        if open:
+            return True if open == "yes" else False
+        return False
 
 
 class AnnotationHandler(object):
@@ -487,6 +694,12 @@ class RGB(object):
     def to_hex(self):
         if len(self.value) == 3 and type(self.value[0]) == float:
             return "#" + "".join([self._float2hex(x) for x in self.value])
+
+    def to_float(self):
+        if type(self.value) == str:
+            value = self.value.replace("#", "")
+            rgb = (value[:2], value[2:4], value[-2:])
+            return [int(f"0x{x}", 16) / 255 for x in rgb]
 
     def _float2hex(self, x: float):
         return self._int2hex(int(255 * x))
