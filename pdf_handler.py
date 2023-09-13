@@ -37,25 +37,27 @@ class PdfHelper(object):
         self.path = path
         self.doc = fitz.open(path)
         self.file_name = os.path.splitext(os.path.split(path)[1])[0]
+        self.file_dir = os.path.split(path)[0]
 
     def export_toc(self, toc_path: str = ""):
         toc = self.doc.get_toc()
+        toc_path = self._get_target_file_path(target=toc_path, file_type="txt")
         TocHandler().save_pymupdf_toc_to_file(pymupdf_toc=toc, toc_path=toc_path)
 
-    def import_toc_from_url(self, url: str):
+    def import_toc_from_url(self, url: str, target_pdf: str = ""):
         toc_list = TocHandler().get_toc_list_from_chinapub(url=url)
         toc = TocHandler().convert_toc_list_to_pymupdf_toc(toc_list=toc_list)
-        self.save_toc(toc)
+        self.save_toc(toc=toc, target_pdf=target_pdf)
 
-    def import_toc_from_file(self, toc_path):
+    def import_toc_from_file(self, toc_path: str, target_pdf: str = ""):
         with open(toc_path, "r") as data:
             lines = data.readlines()
             toc = TocHandler().convert_toc_list_to_pymupdf_toc(toc_list=lines)
-            self.save_toc(toc)
+            self.save_toc(toc=toc, target_pdf=target_pdf)
 
-    def save_toc(self, toc: list):
+    def save_toc(self, toc: list, target_pdf: str = ""):
         self.doc.set_toc(toc)
-        temp_file_path = self.path + "2"
+        self.save_doc(target=target_pdf)
 
     def save_doc(self, target: str = ""):
         target_path = self._get_target_file_path(target=target, file_type="pdf")
@@ -64,9 +66,9 @@ class PdfHelper(object):
         os.replace(temp_file_path, target_path)
 
     def _get_target_file_path(self, target, file_type):
-        """If target is a folder, return target/file_name.file_type;
-        If target is empty, return self.file_dir/file_name.file_type;
-        else return target
+        """If target is a folder, return {target}/{self.file_name}.{file_type};
+        If target is empty, return {self.file_dir}/{self.file_name}.{file_type};
+        else return {target}
         """
         if target and not os.path.splitext(target)[-1]:  # target is a folder
             if not os.path.exists(target):
@@ -133,7 +135,7 @@ class PdfHelper(object):
         for page in self.doc.pages():
             for annot in page.annots():
                 page.delete_annot(annot)
-        self.save_doc(target_path=target_path)
+        self.save_doc(target=target_path)
 
     def format_annots(
         self,
