@@ -93,7 +93,7 @@ class PdfHelper(object):
             if run_test and annot_count > 2 and extracted_pic_count > 2:
                 break
             annot_num = 0
-            word_list = page.getText("words")  # list of words on page
+            word_list = page.get_text("words")  # list of words on page
             word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
             for annot in page.annots():
                 annot_handler = AnnotationHandler(annot)
