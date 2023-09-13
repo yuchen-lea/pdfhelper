@@ -6,6 +6,7 @@ import re
 import os
 from operator import itemgetter
 from typing import List
+import xml.etree.ElementTree as ET
 
 import fitz
 
@@ -21,18 +22,39 @@ SQUIGGLY = 10
 STRIKEOUT = 11
 INK = 15
 
-PYMUPDF_ANNOT_MAPPING = {
-    0: "Text",
-    4: "Square",
-    6: "Polygon",
-    8: "Highlight",
-    9: "Underline",
-    10: "Squiggly",
-    11: "StrikeOut",
+PYMUPDF_ANNOT_TYPE_MAPPING = {
+    TEXT: "Text",
+    LINE: "Line",
+    SQUARE: "Square",
+    HIGHLIGHT: "Highlight",
+    UNDERLINE: "Underline",
+    SQUIGGLY: "Squiggly",
+    STRIKEOUT: "StrikeOut",
+    INK: "Ink",
 }
+
+PYMUPDF_LINE_ENDING_STYLE_MAPPING = {
+    1: "Square",
+    2: "Circle",
+    3: "Diamond",
+    4: "OpenArrow",
+    5: "ClosedArrow",
+    6: "Butt",
+    7: "ROpenArrow",
+    8: "RClosedArrow",
+    9: "Slash",
+}
+
+def is_annot_type_name_in_list(annot_type_name: str, annot_type_list: list[int]):
+    annot_type_name_list = [
+        PYMUPDF_ANNOT_TYPE_MAPPING[x].lower() for x in annot_type_list
+    ]
+    return annot_type_name.lower() in annot_type_name_list
 
 
 class PdfHelper(object):
+    pymupdf_to_xfdf_mappings = [("modDate", "date"), ("id", "name")]
+
     def __init__(self, path):
         self.path = path
         self.doc = fitz.open(path)
@@ -121,7 +143,7 @@ class PdfHelper(object):
                         "text": text,
                         "id": annot_id,
                         "height": annot_handler.height,
-                        "color": annot_handler.color,
+                        "color": annot_handler.stroke_color,
                         "pic": picture_path,
                     }
                 )
@@ -230,6 +252,99 @@ class PdfHelper(object):
             {"type": "toc", "depth": x[0], "content": x[1], "page": x[2]} for x in toc
         ]
 
+    def export_xfdf_annots(self, annot_file: str = ""):
+        """
+        Export annotations in XFDF format.
+
+        Args:
+            annot_file (str): Path to the output XFDF file.
+        """
+        if not self.doc.has_annots():
+            return
+
+        root = ET.Element(
+            "xfdf", xmlns="http://ns.adobe.com/xfdf/", attrib={"xml:space": "preserve"}
+        )
+        annots = ET.SubElement(root, "annots")
+
+        for page in self.doc.pages():
+            for annot in page.annots():
+                annot_h = AnnotationHandler(annot)
+                annot_tag = ET.SubElement(annots, annot_h.type_name.lower())
+
+                # Set common attributes
+                annot_attrs = annot.info
+                for old_key, new_key in self.pymupdf_to_xfdf_mappings:
+                    if old_key in annot_attrs:
+                        annot_attrs[new_key] = annot_attrs[old_key]
+                        del annot_attrs[old_key]
+                annot_attrs["page"] = str(annot_h.page.number)
+                annot_attrs["rect"] = annot_h.xfdf_rect_string()
+                annot_attrs["color"] = annot_h.stroke_color
+                if annot_h.fill_color:
+                    annot_attrs["interior-color"] = annot_h.fill_color
+                # TODO annot_attrs["flags"] = str(annot.flags)
+                annot_attrs["flags"] = "print"
+
+                # Set border attributes
+                border_width = annot.border.get("width")
+                if border_width and border_width != -1:
+                    annot_attrs["width"] = str(border_width)
+                if annot.border.get("dashes"):
+                    annot_attrs["style"] = "dash"
+                    annot_attrs["dashes"] = ",".join(
+                        [str(x) for x in annot.border.get("dashes")]
+                    )
+                elif annot.border.get("clouds") and annot.border.get("clouds") > 0:
+                    annot_attrs["style"] = "cloudy"
+                    annot_attrs["intensity"] = str(annot.border.get("clouds"))
+                    # TODO if fringe not set，imported by xchange will be invisible. Haven't found correspoing pymupdf atrributes.
+                    annot_attrs["fringe"] = "9,9,9,9"
+
+                # Add child nodes
+                if annot_h.content:
+                    content_tag = ET.SubElement(annot_tag, "contents")
+                    content_tag.text = annot_h.content
+
+                if annot.has_popup:
+                    popup_tag = ET.SubElement(annot_tag, "popup")
+                    popup_attrs = {
+                        "open": "yes" if annot.is_open else "no",
+                        "page": str(annot_h.page.number),
+                        "rect": annot_h.xfdf_rect_string(type="popup"),
+                    }
+                    popup_tag.attrib = popup_attrs
+
+                # Set type-specific attributes
+                if annot_h.type_name_in_list([TEXT]):
+                    annot_attrs["icon"] = annot.info.get("name") or "Note"
+                elif annot_h.type_name_in_list([LINE]):
+                    annot_attrs["start"], annot_attrs["end"] = annot_h.line_end_points()
+                    line_head_type = annot.line_ends[0]
+                    line_tail_type = annot.line_ends[1]
+                    if line_head_type:
+                        annot_attrs["head"] = PYMUPDF_LINE_ENDING_STYLE_MAPPING[
+                            line_head_type
+                        ]
+                    if line_tail_type:
+                        annot_attrs["tail"] = PYMUPDF_LINE_ENDING_STYLE_MAPPING[
+                            line_tail_type
+                        ]
+                elif annot_h.type_name_in_list([INK]):
+                    inklist = ET.SubElement(annot_tag, "inklist")
+                    gesture_string_list = annot_h.xfdf_ink_gesture_string_list()
+                    for gesture_string in gesture_string_list:
+                        gesture = ET.SubElement(inklist, "gesture")
+                        gesture.text = gesture_string
+                elif annot_h.type_name_in_list(
+                    [HIGHLIGHT, UNDERLINE, STRIKEOUT, SQUIGGLY]
+                ):
+                    annot_attrs["coords"] = annot_h.xfdf_coords_string()
+                annot_tag.attrib = annot_attrs
+
+        annot_file = self._get_target_file_path(target=annot_file, file_type="xfdf")
+        tree = ET.ElementTree(root)
+        tree.write(annot_file, encoding="utf-8", xml_declaration=True)
 
     def get_page_number(self, label):
         page_index = self.doc.get_page_numbers(label=label)[0]
@@ -249,14 +364,23 @@ class AnnotationHandler(object):
         self.annot = annot
         self.page = annot.parent
         self.pdf_path = self.page.parent.name
+        self.page_height = self.page.rect.height
 
     @property
-    def color(self):
+    def stroke_color(self):
         return RGB(self.annot.colors.get("stroke")).to_hex()
 
     @property
+    def fill_color(self):
+        fill_color = self.annot.colors.get("fill")
+        if fill_color:
+            return RGB(fill_color).to_hex()
+        else:
+            return ""
+
+    @property
     def height(self):
-        return self.annot.rect.y0 / self.page.rect.y1
+        return self.annot.rect.y0 / self.page_height
 
     @property
     def type_id(self):
@@ -265,6 +389,9 @@ class AnnotationHandler(object):
     @property
     def type_name(self):
         return self.annot.type[1]
+
+    def type_name_in_list(self, annot_type_list: list[int]):
+        return is_annot_type_name_in_list(self.type_name, annot_type_list)
 
     @property
     def content(self):
@@ -285,6 +412,38 @@ class AnnotationHandler(object):
             ]
         else:
             return [fitz.Rect()]
+
+    def xfdf_rect_string(self, type: str = "default"):
+        rect = self.annot.popup_rect if type == "popup" else self.annot.rect
+        return (
+            f"{rect.x0},{self.page_height-rect.y1},{rect.x1},{self.page_height-rect.y0}"
+        )
+
+    def xfdf_coords_string(self):
+        result = []
+        vertices = self.annot.vertices
+        for x, y in vertices:
+            result.append(x)
+            result.append(self.page_height - y)
+        return ",".join(map(str, result))
+
+    def line_end_points(self):
+        result = []
+        vertices = self.annot.vertices
+        for x, y in vertices:
+            result.append((x, self.page_height - y))
+        return [f"{x},{y}" for x, y in result]
+
+    def xfdf_ink_gesture_string_list(self) -> list[str]:
+        result = []
+        vertices = self.annot.vertices
+        for sublist in vertices:
+            gesture_points = []
+            for x, y in sublist:
+                gesture_points.append(f"{x},{self.page_height - y}")
+            gesture_text = ";".join(gesture_points)
+            result.append(gesture_text)
+        return result
 
     def save_pic(self, picture_path, zoom):
         if self.type_id in [SQUARE, INK, LINE]:
