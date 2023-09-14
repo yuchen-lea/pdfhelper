@@ -23,7 +23,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.3.0")
+    p.add_argument("--version", "-v", action="version", version="2.3.1")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -112,8 +112,13 @@ def create_argparser():
     )
     parser_export_annot.add_argument(
         "--annot-list-item-format",
-        help="Customize the format of the annotation item using the mako template syntax. The default template is defined in `format_annots_template.annot_item_default_format`. The template supports the following variables: type, page, comment, text, annot_number, annot_id, height, color, pic_path, and pdf_path. For detailed usage, please refer to the Readme.",
+        help="Customize the format of the annotation item using the mako template syntax. The default template is defined in `format_annots_template.annot_item_default_format`. The template supports the following variables: type, page, comment, text, annot_number, annot_id, height, color, pic_path, bib_key, and pdf_path. For detailed usage, please refer to the Readme.",
         default=annot_item_default_format,
+    )
+    parser_export_annot.add_argument(
+        "--bib-path",
+        nargs="+",
+        help="List of bib path(s). When defined, try to find the key of INFILE within bib-path and store it in the bib_key variable.",
     )
     parser_export_annot.add_argument(
         "--run-test",
@@ -171,6 +176,7 @@ def main(args):
             with_toc=args.with_toc,
             toc_list_item_format=args.toc_list_item_format,
             annot_list_item_format=args.annot_list_item_format,
+            bib_file_list=args.bib_path,
             run_test=args.run_test,
         )
     elif args.command == "page-label-to-number":

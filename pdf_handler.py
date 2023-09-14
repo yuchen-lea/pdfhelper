@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import re
 import os
 from operator import itemgetter
 from typing import List
@@ -182,11 +181,18 @@ class PdfHelper(object):
         with_toc: bool = True,
         toc_list_item_format: str = toc_item_default_format,
         annot_list_item_format: str = annot_item_default_format,
+        bib_file_list: List = [],
         run_test: bool = False,
     ):
         results_items = []
         results_strs = []
         level = 0
+        pdf_path = os.path.abspath(self.path)
+        bib_key = (
+            find_unique_bib_key(bib_path_list=bib_file_list, val=pdf_path)
+            if bib_file_list
+            else ""
+        )
         if with_toc:
             results_items.extend(self.toc_dict)
         annots = self._get_annots(
@@ -201,8 +207,8 @@ class PdfHelper(object):
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             context = item
-            context["pdf_path"] = os.path.abspath(self.path)
-            context["bib_key"] = ""
+            context["pdf_path"] = pdf_path
+            context["bib_key"] = bib_key
             if item.get("type") == "toc":
                 level = item.get("level")
                 toc_item_template = Template(toc_list_item_format)
@@ -725,6 +731,21 @@ def pic2pdf(image_dir: str, pdf_path: str):
     doc.set_toc(toc)
     doc.save(pdf_path, garbage=2)
     doc.close()
+
+
+def find_unique_bib_key(bib_path_list, val):
+    keys = []
+    for bib_path in bib_path_list:
+        with open(bib_path, "r", encoding="utf-8") as bib_file:
+            bib_content = bib_file.read()
+
+        for entry in bib_content.split("\n\n"):
+            if val in entry:
+                key = entry.split("{")[1].split(",")[0].strip()
+                keys.append(key)
+        if len(keys) == 1:
+            return keys[0]
+    return ""
 
 
 def images_to_open(file_names: list):
