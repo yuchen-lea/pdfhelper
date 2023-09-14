@@ -8,22 +8,18 @@ from bs4 import BeautifulSoup
 
 
 class TocHandler:
-    def save_toc_to_file_from_url(self, url: str, toc_path: str = ""):
-        toc_list = self.get_toc_list_from_chinapub(url=url)
-        toc_text = "\n".join(toc_list)
+    def save_pymupdf_toc_to_file(self, pymupdf_toc: list, toc_path: str = ""):
+        toc_text = self.convert_pymupdf_toc_to_toc_list(pymupdf_toc=pymupdf_toc)
         self.save_toc_text_to_file(toc_text=toc_text, toc_path=toc_path)
 
-    def save_pymupdf_toc_to_file(self, pymupdf_toc: list, toc_path: str = ""):
+    def convert_pymupdf_toc_to_toc_list(self, pymupdf_toc: list):
         contents = [
             f"{(x[0] - 1) * 2 * ' '}- {x[1].strip()}#{x[2]}" for x in pymupdf_toc
         ]
         toc_text = "\n".join(contents)
-        self.save_toc_text_to_file(toc_text=toc_text, toc_path=toc_path)
+        return toc_text
 
-    def save_toc_text_to_file(self, toc_text: str, toc_path: str = ""):
-        if not toc_path:
-            print(toc_text)
-            return
+    def save_toc_text_to_file(self, toc_text: str, toc_path: str):
         try:
             with open(toc_path, "w") as data:
                 print(toc_text, file=data)
@@ -54,8 +50,8 @@ class TocHandler:
         for line in toc_list:
             page_match = re.match(r"( *)[-+] (.+)# *(\d+) *", line)
             toc_without_page_match = re.match(r"( *)[-+] ([^#]+) *", line)
-            gap_match = re.match(r"# *([\+\-]\d+)", line)
-            first_page_match = re.match(r"#.+= *(\d+)", line)
+            gap_match = re.match(r" *# *([\+\-]\d+)", line)
+            first_page_match = re.match(r" *# *(\d+) *= *(-?\d+) *", line)
             indent_step = 2
 
             if page_match or toc_without_page_match:
@@ -83,9 +79,11 @@ class TocHandler:
                 toc.append([lvl, title, page])
                 last_indent = current_indent
             elif first_page_match:
-                page_gap += int(first_page_match.group(1)) - 1
+                page_gap += int(first_page_match.group(2)) - int(
+                    first_page_match.group(1)
+                )
             elif gap_match:
-                page_gap -= int(gap_match.group(1).replace(" ", ""))
+                page_gap += int(gap_match.group(1).replace(" ", ""))
             else:
                 if line.strip():
                     raise ("Unsuppoted Format!")
@@ -95,38 +93,3 @@ class TocHandler:
         if re.match(r"^第 \d+ 章.+", text):
             return True
         return False
-
-
-def create_argparser():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument(
-        "--book-url",
-        help="Book url to get toc list",
-    )
-    p.add_argument(
-        "--toc-path",
-        help="toc file path",
-    )
-
-    return p
-
-
-def main(args):
-    url = args.book_url
-    toc_path = args.toc_path
-    TocHandler().save_toc_to_file_from_url(url=url, toc_path=toc_path)
-
-
-if __name__ == "__main__":
-    parser = create_argparser()
-    # args = parser.parse_args(
-    #     [
-    #         "/Users/yuchen/Notes/imgs/2021-12-11_10-51-25_screenshot.png",
-    #         "--ocr-service",
-    #         "ocrspace",
-    #         "--language",
-    #         Language.Chinese_Traditional,
-    #     ]
-    # )
-    args = parser.parse_args()
-    main(args)

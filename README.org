@@ -85,12 +85,12 @@ Here, you see three ways of customization:
 - 1. Toys#2
    #+end_verse
    + 🙋‍Note: Using the pattern "# number1=number2" will treat the physical page number2 of the PDF as number1. Any subsequent page numbers set as 'x' will actually point to the physical page calculated as =x+number2-number1=. This is suitable for setting the first page number, for example, "# 1=19", as well as setting the starting page number for the second volume, like "# 250=5".
-3. *Accounting for Page Gaps*: To bookmark the title "4. Numbers Games" on page 71 (calculated as 58 + (16-1) - 2):
+3. *Accounting for Page Gaps*: To bookmark the title "4. Numbers Games" on page 75 (calculated as 58 + (16-1) + 2):
    #+begin_verse
 # +2
 - 4. Numbers Games#58
    #+end_verse
-   + useful when there are missing or extra pages
+   + useful when there are missing or extra pages. At the location of missing pages (for instance, where blank pages counted in the pagination have been removed), set "# -[number of missing pages]". At the location where pages are added (like illustration pages not counted in the pagination), set "# +[number of added pages]".
 
 ** Export Annotations
 
