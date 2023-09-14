@@ -2,5 +2,8 @@
 __pycache__
 .idea
 /venv/
-ocr_config.ini
 *.png
+
+# User Config File
+/format_annots_template.py
+/ocr_config.ini

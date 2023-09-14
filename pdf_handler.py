@@ -9,9 +9,14 @@ from typing import List
 import xml.etree.ElementTree as ET
 
 import fitz
+from mako.template import Template
 
 from picture_handler import Picture
 from toc_handler import TocHandler
+from format_annots_template import (
+    toc_item_default_format,
+    annot_item_default_format,
+)
 
 TEXT = 0
 LINE = 3
@@ -125,10 +130,10 @@ class PdfHelper(object):
             for annot in page.annots():
                 annot_handler = AnnotationHandler(annot)
                 page_num = page.number + 1
-                annot_id = f"annot-{page_num}-{annot_num}"
+                annot_number = f"annot-{page_num}-{annot_num}"
                 picture_path = os.path.join(
                     annot_image_dir,
-                    f'{self.file_name.replace(" ", "-")}-{annot_id}.png',
+                    f'{self.file_name.replace(" ", "-")}-{annot_number}.png',
                 )
                 if annot_handler.save_pic(picture_path, zoom):
                     extracted_pic_count += 1
@@ -144,12 +149,15 @@ class PdfHelper(object):
                     {
                         "type": annot_handler.type_id,
                         "page": page_num,
-                        "content": annot_handler.content,
+                        "comment": annot_handler.content.strip(),
                         "text": text,
-                        "id": annot_id,
+                        "annot_number": annot_number,
+                        "annot_id": annot.info.get("id"),
                         "height": annot_handler.height,
                         "color": annot_handler.stroke_color,
-                        "pic": picture_path,
+                        "pic_path": os.path.abspath(picture_path)
+                        if picture_path
+                        else "",
                     }
                 )
                 annot_num += 1
@@ -172,8 +180,8 @@ class PdfHelper(object):
         output_file: str = "",
         zoom: int = 4,
         with_toc: bool = True,
-        toc_list_item_format: str = "{checkbox} {link}",
-        annot_list_item_format: str = "{checkbox} {color} {link} {content}",
+        toc_list_item_format: str = toc_item_default_format,
+        annot_list_item_format: str = annot_item_default_format,
         run_test: bool = False,
     ):
         results_items = []
@@ -192,44 +200,17 @@ class PdfHelper(object):
             results_items.extend(annots)
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
-            page = item.get("page")
-            content = item.get("content").strip()
-            item_type = item.get("type")
-            if item_type == "toc":
-                level = item.get("depth")
-                string = ("{indent}- " + toc_list_item_format).format(
-                    indent=(level - 1) * 2 * " ",
-                    checkbox="[ ]",
-                    title=content,
-                    link="[[{}:{}::{}][{}]]".format(
-                        "pdf",
-                        self.path,
-                        page,
-                        content,
-                    ),
-                )
+            context = item
+            context["pdf_path"] = os.path.abspath(self.path)
+            context["bib_key"] = ""
+            if item.get("type") == "toc":
+                level = item.get("level")
+                toc_item_template = Template(toc_list_item_format)
+                string = toc_item_template.render(**context)
             else:  # note
-                pic_path = item.get("pic")
-                annot_id = item.get("id")
-                text = item.get("text")
-                string = ("{indent}- " + annot_list_item_format).format(
-                    indent=(level) * 2 * " ",
-                    checkbox="[ ]",
-                    color=item.get("color"),
-                    annot_id=annot_id,
-                    link="[[{}:{}::{}++{:.2f}][{}]]".format(
-                        "pdf",
-                        self.path,
-                        page,
-                        item.get("height"),
-                        annot_id,
-                    ),
-                    content=f"[[file:{pic_path}]]" if pic_path else content,
-                )
-                if text:  # add multiline text in quote block
-                    string += "\n" + (level + 1) * 2 * " " + "#+begin_quote\n"
-                    string += text
-                    string += "\n" + (level + 1) * 2 * " " + "#+end_quote"
+                annot_item_template = Template(annot_list_item_format)
+                context["level"] = level
+                string = annot_item_template.render(**context)
             results_strs.append(string)
         if not output_file:
             print("\n".join(results_strs))
@@ -254,7 +235,8 @@ class PdfHelper(object):
     def toc_dict(self):
         toc = self.doc.get_toc()
         return [
-            {"type": "toc", "depth": x[0], "content": x[1], "page": x[2]} for x in toc
+            {"type": "toc", "level": x[0], "content": x[1].strip(), "page": x[2]}
+            for x in toc
         ]
 
     def export_xfdf_annots(self, annot_file: str = ""):
@@ -590,7 +572,7 @@ class AnnotationHandler(object):
 
     @property
     def height(self):
-        return self.annot.rect.y0 / self.page_height
+        return round(self.annot.rect.y0 / self.page_height, 2)
 
     @property
     def type_id(self):
@@ -605,7 +587,7 @@ class AnnotationHandler(object):
 
     @property
     def content(self):
-        return self.annot.info.get("content")
+        return self.annot.info.get("content", "")
 
     @property
     def rect_list(self) -> List[fitz.Rect]:
@@ -665,7 +647,7 @@ class AnnotationHandler(object):
                 clip=self.rect_list[0],
                 matrix=fitz.Matrix(zoom, zoom),  # zoom image
             )
-            pix.writePNG(picture_path)
+            pix.save(picture_path)
             return 1
         return 0
 
@@ -680,7 +662,7 @@ class AnnotationHandler(object):
             SQUIGGLY,
             STRIKEOUT,
         ]:
-            text = extract_rectangle_list_text(self.rect_list, wordlist)
+            text = self._extract_rectangle_list_text(wordlist)
         if text:
             return text
         elif picture_path and ocr_service:
@@ -688,6 +670,14 @@ class AnnotationHandler(object):
                 ocr_service=ocr_service, language=ocr_language
             )
         return ""
+
+    def _extract_rectangle_list_text(self, wordlist):
+        sentences = []
+        for rect in self.rect_list:
+            words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
+            sentence = " ".join(w[4] for w in words).strip()
+            sentences.append(sentence)
+        return " ".join(sentences)
 
 
 class RGB(object):
@@ -709,20 +699,6 @@ class RGB(object):
 
     def _int2hex(self, x: int):
         return hex(x).replace("x", "0")[-2:]
-
-
-def extract_rectangle_list_text(rect_list: List[fitz.Rect], wordlist):
-    sentences = []
-    for rect in rect_list:
-        sentence = extract_rectangle_text(rect, wordlist)
-        sentences.append(sentence)
-    return " ".join(sentences)
-
-
-def extract_rectangle_text(rect: fitz.Rect, wordlist):
-    words = [w for w in wordlist if fitz.Rect(w[:4]).intersects(rect)]
-    sentence = " ".join(w[4] for w in words)
-    return sentence.strip()
 
 
 def pic2pdf(image_dir: str, pdf_path: str):

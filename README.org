@@ -3,65 +3,56 @@
 [[file:README_CN.org][中文文档]]
 
 * About
-This is a script that deal with pdf file. At present, the following functions are supported:
 
-1. exports the outline/toc of a PDF to a human-readable file. You can see the format [[*TOC format][here]]
-2. imports the toc into a PDF
-3. extracts annotations (highlights, comments, etc.) from a PDF file, and formats them as org-mode.
+This is a command-line tool designed to handle PDF files, with the goal of seamlessly integrating PDFs into various note-taking workflows. Currently, the following capabilities are offered:
 
-* Dependency
+1. *Managing the TOC*: Export the table of contents from a PDF to a user-friendly, plain text list and import it back into the PDF after any modifications. This TOC file is easy to read and convenient for users to modify. The format can be viewed [[*TOC format][here]].
+2. *Annotations Management*:
+   - *Export formatted text annotations*: Extract annotations like highlights, text, squares, and other types of annots from a PDF, capture relevant document images, and support OCR extraction from these images. Using [[https://pypi.org/project/Mako/][Mako]] templates, you can import the formatted PDF annotations into your preferred note-taking system.
+   - *Manage XFDF Annotations*: Export XFDF annotations from the PDF and import them back into the PDF. XFDF files can be imported by PDF readers like XChange. Since some OCR software may flatten annotations during the OCR process, you can export to XFDF before OCR and then import the XFDF after OCR to retain the full annotation functionality.
+   - *Delete annotations* from the PDF: Easily share original PDFs with others.
+3. *Page Label and Number Conversion*: Convert page labels to page numbers and vice versa. Sometimes, while the data is stored as a page number, readers might require navigation based on page labels. This feature addresses that discrepancy.
 
-- Python 3
-- [[https://github.com/pymupdf/PyMuPDF][PyMuPDF]]
-  #+begin_src bash
-pip3 install pymupdf
-  #+end_src
+* Start
+#+begin_src bash
+git clone --depth 1 https://github.com/yuchen-lea/pdfhelper.git
+cd pdfhelper
+make install
+pip install -r requirements.txt
+#+end_src
+
+Then you can use the =pdfhelper= command-line tool!
+
+For subsequent updates, simply pull the latest code from git and run =make update=.
 
 * Usage
-See =pdfannots.py --help= for options and invocation.
 
-: python3 pdfhelper.py -h
+: pdfhelper -h
 
 #+begin_verse
-usage: pdfhelper.py [-h] [--version] [--import-toc] [--export-toc] [--toc-path TOC_PATH] [--export-annot]
-                    [--annot-image-dir ANNOT_IMAGE_DIR] [--ocr-api OCR_API] [--annot-path ANNOT_PATH] [--image-zoom IMAGE_ZOOM]
-                    [--with-toc] [--toc-list-item-format TOC_LIST_ITEM_FORMAT] [--annot-list-item-format ANNOT_LIST_ITEM_FORMAT]
-                    [--run-test]
-                    INFILE
+usage: pdfhelper [-h] [--version]
+                 {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+                 ... INFILE
 
 Some useful functions to process a PDF file.
 
 positional arguments:
+  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+    export-toc          Export the TOC of the PDF.
+    import-toc          Import TOC from a file into the PDF.
+    delete-annot        Delete annotations from the PDF.
+    export-xfdf-annot   Export XFDF annotations of the PDF.
+    import-xfdf-annot   Import XFDF annotations of the PDF.
+    export-annot        Export formatted text annotations of the PDF.
+    page-label-to-number
+                        Convert page label to page number.
+    page-number-to-label
+                        Convert page number to page label.
   INFILE                PDF file to process
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
-
-Process TOC:
-  PDF TOC <-> Human readable List
-
-  --import-toc, -ti     load TOC_PATH into INFILE and update the pdf file.
-  --export-toc, -te     export the toc of INFILE to TOC_PATH. If TOC_PATH is not set, just print to stdout
-  --toc-path TOC_PATH   toc file path
-
-Export Annots:
-  --export-annot, -ae   export annotations of INPUT
-  --annot-image-dir ANNOT_IMAGE_DIR
-                        dir to save extracted pictures. when omitted, save to current working dir
-  --ocr-api OCR_API     paddle OCR API. When set, ocr the picture and insert the result
-  --annot-path ANNOT_PATH
-                        file to save the exported annotations. when omitted, just print to stdout
-  --image-zoom IMAGE_ZOOM
-                        image zoom factor
-  --with-toc            when set, the annotations are placed under corresponding outline items
-  --toc-list-item-format TOC_LIST_ITEM_FORMAT
-                        customize the format of toc item when WITH_TOC, default is '{checkbox} {link}'. available fields: checkbox,
-                        link, title
-  --annot-list-item-format ANNOT_LIST_ITEM_FORMAT
-                        customize the format of annot item, default is '{checkbox} {color} {link} {content}'. available fields:
-                        checkbox, color, annot_id, link, content
-  --run-test            run a test instead of extracting full annotations. useful for checking output format and image qualit
 #+end_verse
 
 ** TOC format
@@ -73,7 +64,7 @@ Sample toc file:
 - Contents#8
 - Foreword#10
 - Preface#12
-# first = 16
+# 1 = 16
 - 1. Toys#2
 - 2. Do It, Do It Again, and Again, and Again ...#14
 - 3. Cons the Magnificent#32
@@ -84,49 +75,62 @@ Sample toc file:
 
 Here, you see three ways of customization:
 
-1. define page number: create a bookmark called 「The Five Rules」 at page 3
+1. *Defining a Page Number*: To bookmark page 3 with the title "The Five Rules":
    #+begin_verse
 - The Five Rules#3
    #+end_verse
-2. set first page: create a bookmark called 「1. Toys」 at page 17 (since the first page is 16)
+2. *Setting the First Page*: To bookmark page 17 with the title "1. Toys" (considering the first page is numbered 16):
    #+begin_verse
-# first = 16
+# 1 = 16
 - 1. Toys#2
    #+end_verse
-   + In fact, you can use any text match "# xxx = number" to set first page to number
-3. set page gap:  create a bookmark called 「4. Numbers Games」 at page 58+(16-1)-2=71 (You have to minus 2 pages gap to get correct page number)
+   + 🙋‍Note: Using the pattern "# number1=number2" will treat the physical page number2 of the PDF as number1. Any subsequent page numbers set as 'x' will actually point to the physical page calculated as =x+number2-number1=. This is suitable for setting the first page number, for example, "# 1=19", as well as setting the starting page number for the second volume, like "# 250=5".
+3. *Accounting for Page Gaps*: To bookmark the title "4. Numbers Games" on page 71 (calculated as 58 + (16-1) - 2):
    #+begin_verse
 # +2
 - 4. Numbers Games#58
    #+end_verse
-   + useful when there are missing pages
+   + useful when there are missing or extra pages
 
 ** Export Annotations
 
+
 Currently, the following annotation types are supported:
 
-| Type      | Result                                                                                    |
-|-----------+-------------------------------------------------------------------------------------------|
-| Text      | text                                                                                      |
-| Square    | picture, you can set the zoom factor by ~--image-zoom~ and ocr the picture by ~--ocr-api~ |
-| Highlight | comment + text                                                                            |
-| Underline | comment + text                                                                            |
-| Squiggly  | comment + text                                                                            |
-| StrikeOut | comment + text                                                                            |
+| Type      | Result                                                                                                                                                                                                                                                                     |
+|-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Text      | comment                                                                                                                                                                                                                                                                    |
+| Square    | comment + picture (set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.)                                                                                                  |
+| Highlight | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
+| Underline | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
+| Squiggly  | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
+| StrikeOut | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
+| Ink       | comment + picture (captures the content within the marked height of the document, rather than just the mark itself. set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
+| Line      | comment + picture (captures the content within the marked height of the document, rather than just the mark itself. set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
 
-You can customize the note format by
+You can customize the note format by:
 - ~--with-toc~
 - ~--toc-list-item-format~
 - ~--annot-list-item-format~
 
 * Changelog
 
+
+- 2.3.0
+  + =export-annot= supports [[https://pypi.org/project/Mako/][Mako]] templates
+- 2.2.0
+  + new feature =import-xfdf-annot=
+- 2.1.0
+  + new feature =export-xfdf-annot=
+- 2.0.0
+  + ⭐ Update argument parsing structure to use subparsers for clearer command distinction.
+  + add Makefile to install and uninstall script
 - 1.4.0
   + new feature =delete-annot=: Delete all annots in pdf
 - 1.3.0
   + improve feature =import-toc=: Support set the first page and fix a gap. See more info [[*TOC format][here]]
 - 1.2.0
-  + new feature =export-annot=: Export the annotations of pdf
+  + new feature =export-annot=: Export the annotations of PDF
 - 1.1.0
   + new feature =export-toc=: Export the toc of pdf to human-readable file. You can see the format [[*TOC format][here]]
   + new feature =import-toc=: Import the toc of pdf, the toc shares the same format with the exported one

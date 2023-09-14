@@ -8,6 +8,10 @@ import argparse
 
 from pdf_handler import PdfHelper
 from picture_handler import help_text_for_ocr_language, help_text_for_ocr_service
+from format_annots_template import (
+    toc_item_default_format,
+    annot_item_default_format,
+)
 
 
 def create_argparser():
@@ -19,7 +23,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.2.0")
+    p.add_argument("--version", "-v", action="version", version="2.3.0")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -103,13 +107,13 @@ def create_argparser():
     )
     parser_export_annot.add_argument(
         "--toc-list-item-format",
-        help="Customize the format of toc item when WITH_TOC. Default is '{checkbox} {link}'. Available fields: checkbox, link, title",
-        default="{checkbox} {link}",
+        help="Customize the format of the table of contents (TOC) item using the mako template syntax. The default template is defined in `format_annots_template.toc_item_default_format`. The template supports the following variables: level, page, content, and pdf_path. For detailed usage, please refer to the Readme.",
+        default=toc_item_default_format,
     )
     parser_export_annot.add_argument(
         "--annot-list-item-format",
-        help="Customize the format of annot item. Default is '{checkbox} {color} {link} {content}'. Available fields: checkbox, color, annot_id, link, content",
-        default="{checkbox} {color} {link} {content}",
+        help="Customize the format of the annotation item using the mako template syntax. The default template is defined in `format_annots_template.annot_item_default_format`. The template supports the following variables: type, page, comment, text, annot_number, annot_id, height, color, pic_path, and pdf_path. For detailed usage, please refer to the Readme.",
+        default=annot_item_default_format,
     )
     parser_export_annot.add_argument(
         "--run-test",
