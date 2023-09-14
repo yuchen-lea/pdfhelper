@@ -8,7 +8,7 @@ annot_item_org_mode_format = """${' ' * (level) * 2}- [ ] ${color} \\
 <%
     import os.path
     relative_pic_path = os.path.relpath(pic_path, start="/Users/yuchen/Notes/") if pic_path else ""
-%>
+%>\\
 % if bib_key:
 [[cite:${bib_key}][${page}++${height}]] \\
 % else:
