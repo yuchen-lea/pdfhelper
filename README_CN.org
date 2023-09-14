@@ -1,0 +1,146 @@
+#+TITLE: 帮助文档
+
+
+* 概述
+
+这是一个用来处理PDF文件的命令行工具，其目标是无缝地将PDF集成到各种笔记工作流中。目前，该工具提供以下功能：
+
+1. *管理目录*​：从PDF导出目录到纯文本列表格式，并在修改后将其导入回PDF。该格式用户易读，方便修改，可以在[[*目录格式][此处]]查看。
+2. *注释管理*
+   - *导出格式化的文本注释*：从PDF中提取如高亮、文本、方框等类型的注释，存储相关的图像，并支持从这些图像中OCR提取文本。使用 [[https://pypi.org/project/Mako/][Mako]] 模板，您可以自由定制文本格式，导入到您喜欢的笔记系统中。
+   - *管理XFDF注释*：从PDF中导出XFDF注释并将其导入回PDF。该文件与XChange等PDF阅读器兼容。由于某些OCR软件在OCR过程中会压平注释，因此可以在OCR之前导出XFDF，然后在OCR之后导入XFDF以保留完整的注释。
+   - *删除注释*：方便分享原始PDF。
+3. *页面标签和页码的转换*：有时笔记中记录的是页码，但阅读器需要基于页面标签进行导航。此功能处理此类差异。
+
+* 开始
+
+#+begin_src bash
+git clone --depth 1 https://github.com/yuchen-lea/pdfhelper.git
+cd pdfhelper
+make install
+pip install -r requirements.txt
+#+end_src
+
+然后开始使用=pdfhelper=命令行工具吧！
+
+对于后续的更新，只需从git拉取最新的代码并运行=make update=。
+
+* 使用方法
+
+: pdfhelper -h
+
+#+begin_verse
+usage: pdfhelper [-h] [--version]
+                 {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+                 ... INFILE
+
+Some useful functions to process a PDF file.
+
+positional arguments:
+  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+    export-toc          Export the TOC of the PDF.
+    import-toc          Import TOC from a file into the PDF.
+    delete-annot        Delete annotations from the PDF.
+    export-xfdf-annot   Export XFDF annotations of the PDF.
+    import-xfdf-annot   Import XFDF annotations of the PDF.
+    export-annot        Export formatted text annotations of the PDF.
+    page-label-to-number
+                        Convert page label to page number.
+    page-number-to-label
+                        Convert page number to page label.
+  INFILE                PDF file to process
+
+options:
+  -h, --help            show this help message and exit
+  --version, -v         show program's version number and exit
+#+end_verse
+
+
+** 目录格式
+
+实例：
+#+begin_verse
+- Cover#1
+- The Ten Commandments#2
+- The Five Rules#3
+- Contents#8
+- Foreword#10
+- Preface#12
+# first = 16
+- 1. Toys#2
+- 2. Do It, Do It Again, and Again, and Again ...#14
+- 3. Cons the Magnificent#32
+# +2
+- 4. Numbers Games#58
+#+end_verse
+
+
+共有三种设置方式：
+
+
+    设置第一页：为带有标题“1. 玩具”的第17页创建书签（考虑到第一页编号为16）：
+    #+begin_verse
+
+1. 设置页码: 为第3页设置目录“The Five Rules”
+   #+begin_verse
+- The Five Rules#3
+   #+end_verse
+2. 设置起始页: 为第17页设置目录“1. Toys” （因为首页从16开始，所以2指向物理第17页）
+   #+begin_verse
+# 1 = 16
+- 1. Toys#2
+   #+end_verse
+   + 🙋‍注意：使用模式“# number1=number2”可以将PDF的物理页面number2视为number1。任何后续设置为'x'的页面编号实际上将指向=x+number2-number1=的物理页面。这同样可以设置第二卷的起始页，例如“# 250=5”。
+3. 设置页面 gap: 为第75页（58 + (16-1) + 2）设置目录“4. Numbers Games”
+   #+begin_verse
+# +2
+- 4. Numbers Games#58
+   #+end_verse
+   + 当有缺失或额外的页面时很有用。在缺失页面的位置（例如，计入页码的空白页已被删除），设置“# -[缺失的页面数]”。在额外页面的位置（例如，插图页面未计入页码），设置“# +[添加的页面数]”。
+
+** 导出注释
+
+目前，支持以下注释类型：
+
+| Type             | Result                                                                                                                                 |
+|------------------+----------------------------------------------------------------------------------------------------------------------------------------|
+| 便签 Text        | comment                                                                                                                                |
+| 方框 Square      | comment + picture (set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
+| 高亮 Highlight   | comment + text (extract from the PDF)                                                                                                  |
+| 下划线 Underline | comment + text (extract from the PDF)                                                                                                  |
+| 波浪线 Squiggly  | comment + text (extract from the PDF)                                                                                                  |
+| 删除线 StrikeOut | comment + text (extract from the PDF)                                                                                                  |
+| 手写 Ink         | comment + picture (保存文档中标记高度内的内容，而不仅仅是标记本身。 set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
+| 线条/箭头 Line   | comment + picture (保存文档中标记高度内的内容，而不仅仅是标记本身。 set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.)   |
+
+You can customize the note format by
+- ~--with-toc~
+- ~--toc-list-item-format~
+- ~--annot-list-item-format~
+
+* Changelog
+
+- 2.3.0
+  + =export-annot= supports [[https://pypi.org/project/Mako/][Mako]] templates
+- 2.2.0
+  + new feature =import-xfdf-annot=
+- 2.1.0
+  + new feature =export-xfdf-annot=
+- 2.0.0
+  + ⭐ Update argument parsing structure to use subparsers for clearer command distinction.
+  + add Makefile to install and uninstall script
+- 1.4.0
+  + new feature =delete-annot=: Delete all annots in pdf
+- 1.3.0
+  + improve feature =import-toc=: Support set the first page and fix a gap. See more info [[*TOC format][here]]
+- 1.2.0
+  + new feature =export-annot=: Export the annotations of PDF
+- 1.1.0
+  + new feature =export-toc=: Export the toc of pdf to human-readable file. You can see the format [[*TOC format][here]]
+  + new feature =import-toc=: Import the toc of pdf, the toc shares the same format with the exported one
+* Credits
+
+此项目受到以下工具的启发：
+
+- [[https://github.com/0xabu/pdfannots][0xabu/pdfannots: Extracts and formats text annotations from a PDF file]]: based on pdfminer and format as markdown text. It deals with hyphens but donot extract rectangle annot.
+- [[https://www.cnblogs.com/pdfpatcher/archive/2011/04/12/2013974.html][PDFPatcher]](Chinese) a great pdf utility tool.
