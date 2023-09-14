@@ -62,7 +62,11 @@ def is_annot_type_name_in_list(annot_type_name: str, annot_type_list: list[int])
 
 
 class PdfHelper(object):
-    pymupdf_to_xfdf_mappings = [("modDate", "date"), ("id", "name")]
+    pymupdf_to_xfdf_mappings = [
+        ("modDate", "date"),
+        ("id", "name"),
+        ("creationDate", "creationdate"),
+    ]
 
     def __init__(self, path):
         self.path = path
