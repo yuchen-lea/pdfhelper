@@ -76,10 +76,6 @@ options:
 
 共有三种设置方式：
 
-
-    设置第一页：为带有标题“1. 玩具”的第17页创建书签（考虑到第一页编号为16）：
-    #+begin_example
-
 1. 设置页码: 为第3页设置目录“The Five Rules”
    #+begin_example
 - The Five Rules#3
