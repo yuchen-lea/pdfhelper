@@ -80,6 +80,7 @@ options:
    #+begin_example
 - The Five Rules#3
    #+end_example
+   - 🙋‍ 列表缩进即目录的缩进
 2. 设置起始页: 为第17页设置目录“1. Toys” （因为首页从16开始，所以2指向物理第17页）
    #+begin_example
 # 1 = 16

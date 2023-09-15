@@ -79,6 +79,7 @@ Here, you see three ways of customization:
    #+begin_example
 - The Five Rules#3
    #+end_example
+   - 🙋‍ List indentation is the same as toc indentation.
 2. *Setting the First Page*: To bookmark page 17 with the title "1. Toys" (considering the first page is numbered 16):
    #+begin_example
 # 1 = 16
