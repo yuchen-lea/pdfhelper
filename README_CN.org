@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 : pdfhelper -h
 
-#+begin_verse
+#+begin_example
 usage: pdfhelper [-h] [--version]
                  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
                  ... INFILE
@@ -53,13 +53,13 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
-#+end_verse
+#+end_example
 
 
 ** 目录格式
 
 实例：
-#+begin_verse
+#+begin_example
 - Cover#1
 - The Ten Commandments#2
 - The Five Rules#3
@@ -72,46 +72,46 @@ options:
 - 3. Cons the Magnificent#32
 # +2
 - 4. Numbers Games#58
-#+end_verse
-
+#+end_example
 
 共有三种设置方式：
 
 
     设置第一页：为带有标题“1. 玩具”的第17页创建书签（考虑到第一页编号为16）：
-    #+begin_verse
+    #+begin_example
 
 1. 设置页码: 为第3页设置目录“The Five Rules”
-   #+begin_verse
+   #+begin_example
 - The Five Rules#3
-   #+end_verse
+   #+end_example
 2. 设置起始页: 为第17页设置目录“1. Toys” （因为首页从16开始，所以2指向物理第17页）
-   #+begin_verse
+   #+begin_example
 # 1 = 16
 - 1. Toys#2
-   #+end_verse
+   #+end_example
    + 🙋‍注意：使用模式“# number1=number2”可以将PDF的物理页面number2视为number1。任何后续设置为'x'的页面编号实际上将指向=x+number2-number1=的物理页面。这同样可以设置第二卷的起始页，例如“# 250=5”。
 3. 设置页面 gap: 为第75页（58 + (16-1) + 2）设置目录“4. Numbers Games”
-   #+begin_verse
+   #+begin_example
 # +2
 - 4. Numbers Games#58
-   #+end_verse
+   #+end_example
    + 当有缺失或额外的页面时很有用。在缺失页面的位置（例如，计入页码的空白页已被删除），设置“# -[缺失的页面数]”。在额外页面的位置（例如，插图页面未计入页码），设置“# +[添加的页面数]”。
 
 ** 导出注释
 
 目前，支持以下注释类型：
 
-| Type             | Result                                                                                                                                 |
-|------------------+----------------------------------------------------------------------------------------------------------------------------------------|
-| 便签 Text        | comment                                                                                                                                |
+| Type             | Result                                                            |
+|------------------+-------------------------------------------------------------------|
+| 便签 Text        | comment                                                           |
+| 文本 FreeText    | comment                                                           |
 | 方框 Square      | comment + picture (set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
-| 高亮 Highlight   | comment + text (extract from the PDF)                                                                                                  |
-| 下划线 Underline | comment + text (extract from the PDF)                                                                                                  |
-| 波浪线 Squiggly  | comment + text (extract from the PDF)                                                                                                  |
-| 删除线 StrikeOut | comment + text (extract from the PDF)                                                                                                  |
+| 高亮 Highlight   | comment + text (extract from the PDF)                             |
+| 下划线 Underline | comment + text (extract from the PDF)                             |
+| 波浪线 Squiggly  | comment + text (extract from the PDF)                             |
+| 删除线 StrikeOut | comment + text (extract from the PDF)                             |
 | 手写 Ink         | comment + picture (保存文档中标记高度内的内容，而不仅仅是标记本身。 set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
-| 线条/箭头 Line   | comment + picture (保存文档中标记高度内的内容，而不仅仅是标记本身。 set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.)   |
+| 线条/箭头 Line   | comment + picture (保存文档中标记高度内的内容，而不仅仅是标记本身。 set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
 
 You can customize the note format by
 - ~--with-toc~

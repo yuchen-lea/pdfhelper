@@ -29,7 +29,7 @@ For subsequent updates, simply pull the latest code from git and run =make updat
 
 : pdfhelper -h
 
-#+begin_verse
+#+begin_example
 usage: pdfhelper [-h] [--version]
                  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
                  ... INFILE
@@ -53,11 +53,11 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
-#+end_verse
+#+end_example
 
 ** TOC format
 Sample toc file:
-#+begin_verse
+#+begin_example
 - Cover#1
 - The Ten Commandments#2
 - The Five Rules#3
@@ -70,26 +70,26 @@ Sample toc file:
 - 3. Cons the Magnificent#32
 # +2
 - 4. Numbers Games#58
-#+end_verse
+#+end_example
 
 
 Here, you see three ways of customization:
 
 1. *Defining a Page Number*: To bookmark page 3 with the title "The Five Rules":
-   #+begin_verse
+   #+begin_example
 - The Five Rules#3
-   #+end_verse
+   #+end_example
 2. *Setting the First Page*: To bookmark page 17 with the title "1. Toys" (considering the first page is numbered 16):
-   #+begin_verse
+   #+begin_example
 # 1 = 16
 - 1. Toys#2
-   #+end_verse
+   #+end_example
    + 🙋‍Note: Using the pattern "# number1=number2" will treat the physical page number2 of the PDF as number1. Any subsequent page numbers set as 'x' will actually point to the physical page calculated as =x+number2-number1=. This is suitable for setting the first page number, for example, "# 1=19", as well as setting the starting page number for the second volume, like "# 250=5".
 3. *Accounting for Page Gaps*: To bookmark the title "4. Numbers Games" on page 75 (calculated as 58 + (16-1) + 2):
-   #+begin_verse
+   #+begin_example
 # +2
 - 4. Numbers Games#58
-   #+end_verse
+   #+end_example
    + useful when there are missing or extra pages. At the location of missing pages (for instance, where blank pages counted in the pagination have been removed), set "# -[number of missing pages]". At the location where pages are added (like illustration pages not counted in the pagination), set "# +[number of added pages]".
 
 ** Export Annotations
@@ -97,14 +97,15 @@ Here, you see three ways of customization:
 
 Currently, the following annotation types are supported:
 
-| Type      | Result                                                                                                                                                                                                                                                                     |
-|-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Text      | comment                                                                                                                                                                                                                                                                    |
-| Square    | comment + picture (set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.)                                                                                                  |
-| Highlight | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
-| Underline | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
-| Squiggly  | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
-| StrikeOut | comment + text (extract from the PDF)                                                                                                                                                                                                                                      |
+| Type      | Result                                                                                                                                 |
+|-----------+----------------------------------------------------------------------------------------------------------------------------------------|
+| Text      | comment                                                                                                                                |
+| FreeText  | comment                                                                                                                                |
+| Square    | comment + picture (set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
+| Highlight | comment + text (extract from the PDF)                                                                                                  |
+| Underline | comment + text (extract from the PDF)                                                                                                  |
+| Squiggly  | comment + text (extract from the PDF)                                                                                                  |
+| StrikeOut | comment + text (extract from the PDF)                                                                                                  |
 | Ink       | comment + picture (captures the content within the marked height of the document, rather than just the mark itself. set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
 | Line      | comment + picture (captures the content within the marked height of the document, rather than just the mark itself. set the zoom factor by ~--image-zoom~) + text (extract from the PDF, or use the ~--ocr-service~ and ~--ocr-language~ to recognize text within images.) |
 
