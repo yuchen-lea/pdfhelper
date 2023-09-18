@@ -79,11 +79,11 @@ class TocHandler:
                 toc.append([lvl, title, page])
                 last_indent = current_indent
             elif first_page_match:
-                page_gap += int(first_page_match.group(2)) - int(
+                page_gap = int(first_page_match.group(2)) - int(
                     first_page_match.group(1)
                 )
             elif gap_match:
-                page_gap += int(gap_match.group(1).replace(" ", ""))
+                page_gap += int(gap_match.group(1))
             else:
                 if line.strip():
                     raise ("Unsuppoted Format!")
