@@ -249,6 +249,26 @@ class PdfHelper(object):
             for x in toc
         ]
 
+    def export_info(self, info_file: str = ""):
+        root = ET.Element("root")
+        ET.SubElement(root, "f", href=self.path)
+        filtered_metadata = {
+            k: v for k, v in self.doc.metadata.items() if v not in [None, ""]
+        }
+        ET.SubElement(root, "metadata", **filtered_metadata)
+        toc_tag = ET.SubElement(root, "toc")
+        for item in self.doc.get_toc():
+            item_attrs = {"lvl": str(item[0]), "title": item[1], "page": str(item[2])}
+            ET.SubElement(toc_tag, "item", **item_attrs)
+        page_label_tag = ET.SubElement(root, "labels")
+        for item in self.doc.get_page_labels():
+            ET.SubElement(
+                page_label_tag, "item", **{k: str(v) for k, v in item.items()}
+            )
+        info_file = self._get_target_file_path(target=info_file, file_type="xml")
+        tree = ET.ElementTree(root)
+        tree.write(info_file, encoding="utf-8", xml_declaration=True)
+
     def export_xfdf_annots(self, annot_file: str = ""):
         """
         Export annotations in XFDF format.

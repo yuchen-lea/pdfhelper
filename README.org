@@ -118,6 +118,8 @@ You can customize the note format by:
 * Changelog
 
 
+- 2.4.0
+  + new feature =export-info=: Export PDF info to xml file
 - 2.3.0
   + =export-annot= supports [[https://pypi.org/project/Mako/][Mako]] templates
 - 2.2.0

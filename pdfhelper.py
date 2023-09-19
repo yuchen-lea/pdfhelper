@@ -23,7 +23,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.3.1")
+    p.add_argument("--version", "-v", action="version", version="2.4.0")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -126,6 +126,17 @@ def create_argparser():
         action="store_true",
     )
 
+    # export-info
+    parser_export_info = subparsers.add_parser(
+        "export-info", help="Export information of the PDF."
+    )
+    parser_export_info.add_argument(
+        "INFO_PATH",
+        nargs="?",
+        default="",
+        help="Path to save the PDF information.",
+    )
+
     # page-label-to-number
     parser_page_label_to_number = subparsers.add_parser(
         "page-label-to-number", help="Convert page label to page number."
@@ -179,6 +190,8 @@ def main(args):
             bib_file_list=args.bib_path,
             run_test=args.run_test,
         )
+    elif args.command == "export-info":
+        pdf.export_info(info_file=args.INFO_PATH)
     elif args.command == "page-label-to-number":
         pdf.get_page_number(label=args.PAGE_LABEL)
     elif args.command == "page-number-to-label":
