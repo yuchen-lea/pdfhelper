@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
+from datetime import datetime
 import os
 from operator import itemgetter
 from typing import List
@@ -52,6 +52,21 @@ PYMUPDF_LINE_ENDING_STYLE_MAPPING = {
 PYMUPDF_LINE_ENDING_STYLE_REVERSE_MAPPING = {
     v: k for k, v in PYMUPDF_LINE_ENDING_STYLE_MAPPING.items()
 }
+
+
+def parse_date(date_str):
+    if date_str.startswith("D:"):
+        # PDF timestamp: "D:20231023135429+08'00'"
+        try:
+            return datetime.strptime(date_str[2:-7], "%Y%m%d%H%M%S")
+        except ValueError:
+            raise ValueError(f"Invalid date format: {date_str}")
+    for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            pass
+    raise ValueError(f"Invalid date format: {date_str}")
 
 
 def is_annot_type_name_in_list(annot_type_name: str, annot_type_list: list[int]):
@@ -117,6 +132,8 @@ class PdfHelper(object):
         ocr_service: str = "",
         ocr_language: str = "",
         zoom: int = 4,  # image zoom factor
+        creation_start_date: str = "",
+        creation_end_date: str = "",
         run_test: bool = False,  # get 3 annot and 3 pic at most
     ):
         annot_list = []
@@ -131,6 +148,11 @@ class PdfHelper(object):
             word_list = page.get_text("words")  # list of words on page
             word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
             for annot in page.annots():
+                annot_date = parse_date(annot.info.get("creationDate"))
+                if creation_start_date and annot_date < parse_date(creation_start_date):
+                    continue
+                if creation_end_date and annot_date > parse_date(creation_end_date):
+                    continue
                 annot_handler = AnnotationHandler(annot)
                 page_num = page.number + 1
                 annot_number = f"annot-{page_num}-{annot_num}"
@@ -150,7 +172,10 @@ class PdfHelper(object):
                 )
                 annot_list.append(
                     {
-                        "type": annot_handler.type_id,
+                        "type": annot_handler.type_name,
+                        "author": annot.info.get("title"),
+                        "creation_date": annot_date.strftime("%Y-%m-%d"),
+                        "creation_timestamp": annot_date,
                         "page": page_num,
                         "comment": annot_handler.content.strip(),
                         "text": text,
@@ -183,6 +208,8 @@ class PdfHelper(object):
         output_file: str = "",
         zoom: int = 4,
         with_toc: bool = True,
+        creation_start_date: str = "",
+        creation_end_date: str = "",
         toc_list_item_format: str = toc_item_default_format,
         annot_list_item_format: str = annot_item_default_format,
         bib_file_list: List = [],
@@ -198,16 +225,19 @@ class PdfHelper(object):
             else ""
         )
         if with_toc:
-            results_items.extend(self.toc_dict)
+            results_items.extend(
+                self.toc_dict
+            )  # extend toc before annot to ensure that annot item is after toc item after sorting by page
         annots = self._get_annots(
             annot_image_dir=annot_image_dir,
             ocr_service=ocr_service,
             ocr_language=ocr_language,
             zoom=zoom,
+            creation_start_date=creation_start_date,
+            creation_end_date=creation_end_date,
             run_test=run_test,
         )
-        if annots:
-            results_items.extend(annots)
+        results_items.extend(annots)
         results_items = sorted(results_items, key=itemgetter("page"))
         for item in results_items:
             context = item

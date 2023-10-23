@@ -23,7 +23,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.4.0")
+    p.add_argument("--version", "-v", action="version", version="2.4.1")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -121,6 +121,17 @@ def create_argparser():
         help="List of bib path(s). When defined, try to find the key of INFILE within bib-path and store it in the bib_key variable.",
     )
     parser_export_annot.add_argument(
+        "--creation-start",
+        help="Specify the start of creation date range for exporting annotations in the format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'.",
+        default="",
+    )
+
+    parser_export_annot.add_argument(
+        "--creation-end",
+        help="Specify the end of creation date range for exporting annotations in the format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS'.",
+        default="",
+    )
+    parser_export_annot.add_argument(
         "--run-test",
         help="Run a test instead of extracting full annotations. Useful for checking output format and image quality",
         action="store_true",
@@ -188,6 +199,8 @@ def main(args):
             toc_list_item_format=args.toc_list_item_format,
             annot_list_item_format=args.annot_list_item_format,
             bib_file_list=args.bib_path,
+            creation_start_date=args.creation_start,
+            creation_end_date=args.creation_end,
             run_test=args.run_test,
         )
     elif args.command == "export-info":
