@@ -56,9 +56,9 @@ PYMUPDF_LINE_ENDING_STYLE_REVERSE_MAPPING = {
 
 def parse_date(date_str):
     if date_str.startswith("D:"):
-        # PDF timestamp: "D:20231023135429+08'00'"
+        # PDF timestamp: "D:20231023135429+08'00'" or 'D:20240101152246Z'
         try:
-            return datetime.strptime(date_str[2:-7], "%Y%m%d%H%M%S")
+            return datetime.strptime(date_str[2:16], "%Y%m%d%H%M%S")
         except ValueError:
             raise ValueError(f"Invalid date format: {date_str}")
     for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%d"]:
