@@ -114,6 +114,7 @@ class PdfHelper(object):
         temp_file_path = target_path + "2"
         self.doc.save(temp_file_path, garbage=2)
         os.replace(temp_file_path, target_path)
+        return target_path
 
     def _get_target_file_path(self, target, file_type):
         """If target is a folder, return {target}/{self.file_name}.{file_type};
@@ -268,7 +269,6 @@ class PdfHelper(object):
             ]
             if len(toc_item) < 5:
                 toc.extend([[1, x, num + 1] for x in toc_item])
-        print(self.toc_text(toc))
         self.save_toc(toc)
 
     @property
@@ -298,6 +298,7 @@ class PdfHelper(object):
         info_file = self._get_target_file_path(target=info_file, file_type="xml")
         tree = ET.ElementTree(root)
         tree.write(info_file, encoding="utf-8", xml_declaration=True)
+        print(info_file)
 
     def export_xfdf_annots(self, annot_file: str = ""):
         """
@@ -441,6 +442,10 @@ class PdfHelper(object):
     def import_xfdf_annots(
         self, annot_file: str = "", target_pdf: str = "", save_pdf: bool = False
     ):
+        if os.path.isdir(annot_file):
+            annot_file = os.path.join(annot_file, f"{self.file_name}.xfdf")
+        if not os.path.exists(annot_file):
+            raise Exception("No XFDF Annot Found!")
         tree = ET.parse(annot_file)
         root = tree.getroot()
         namespace = "{http://ns.adobe.com/xfdf/}"
@@ -496,7 +501,8 @@ class PdfHelper(object):
             annot.update()
 
         if save_pdf:
-            self.save_doc(target=target_pdf)
+            pdf_path = self.save_doc(target=target_pdf)
+            print(pdf_path)
 
     def get_page_number(self, label):
         page_numbers = self.doc.get_page_numbers(label=label)

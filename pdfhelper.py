@@ -4,6 +4,7 @@
 Some useful functions to process a PDF file.
 """
 import argparse
+import sys
 
 
 from pdf_handler import PdfHelper
@@ -182,7 +183,9 @@ def create_argparser():
 
 
 def main(args):
-    path = args.INFILE.name
+    path = (
+        sys.stdin.read().strip() if args.INFILE.name == "<stdin>" else args.INFILE.name
+    )
     pdf = PdfHelper(path)
 
     if args.command == "export-toc":
