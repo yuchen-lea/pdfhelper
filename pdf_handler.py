@@ -151,7 +151,7 @@ class PdfHelper(object):
             word_list = page.get_text("words")  # list of words on page
             word_list.sort(key=lambda w: (w[3], w[0]))  # ascending y, then x
             for annot in page.annots():
-                annot_date = parse_date(annot.info.get("creationDate"))
+                annot_date = parse_date(annot.info.get("creationDate") or annot.info.get("modDate"))
                 if creation_start_date and annot_date < parse_date(creation_start_date):
                     continue
                 if creation_end_date and annot_date > parse_date(creation_end_date):
