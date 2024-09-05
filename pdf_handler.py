@@ -393,6 +393,51 @@ class PdfHelper(object):
         tree = ET.ElementTree(root)
         tree.write(annot_file, encoding="utf-8", xml_declaration=True)
 
+    def import_info(
+        self, info_file: str = "", target_pdf: str = "", save_pdf: bool = False
+    ):
+        if os.path.isdir(info_file):
+            info_file = os.path.join(info_file, f"{self.file_name}.xml")
+        if not os.path.exists(info_file):
+            raise Exception("No info file Found!")
+        tree = ET.parse(info_file)
+        root = tree.getroot()
+        metadata_tag = root.find("metadata")
+        if metadata_tag is not None:
+            metadata_dict = metadata_tag.attrib
+            self.doc.set_metadata(metadata_dict)
+
+        toc = []
+        toc_tag = root.find("toc")
+        if toc_tag is not None:
+            for item in toc_tag.findall("item"):
+                toc.append(
+                    [
+                        int(item.attrib.get("lvl", 0)),
+                        item.attrib.get("title", ""),
+                        int(item.attrib.get("page", 0)),
+                    ]
+                )
+            self.doc.set_toc(toc)
+
+        labels = []
+        labels_tag = root.find("labels")
+        if labels_tag is not None:
+            for item in labels_tag.findall("item"):
+                item_dict = item.attrib
+                item_dict.update(
+                    {
+                        k: int(v)
+                        for k, v in item_dict.items()
+                        if k in ["firstpagenum", "startpage"]
+                    }
+                )
+                labels.append(item_dict)
+            self.doc.set_page_labels(labels)
+        if save_pdf:
+            pdf_path = self.save_doc(target=target_pdf)
+            print(pdf_path)
+
     def import_xfdf_annots(
         self, annot_file: str = "", target_pdf: str = "", save_pdf: bool = False
     ):

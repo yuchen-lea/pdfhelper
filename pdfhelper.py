@@ -23,7 +23,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.4.1")
+    p.add_argument("--version", "-v", action="version", version="2.5.0")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(
@@ -148,6 +148,20 @@ def create_argparser():
         help="Path to save the PDF information.",
     )
 
+    # import-info
+    parser_import_info = subparsers.add_parser(
+        "import-info", help="Import information of the PDF."
+    )
+    parser_import_info.add_argument(
+        "INFO_PATH",
+        nargs="?",
+        default="",
+        help="Path to load the PDF information from.",
+    )
+    parser_import_info.add_argument(
+        "--target", help="Target PDF file or folder. Defaults to updating INFILE."
+    )
+
     # page-label-to-number
     parser_page_label_to_number = subparsers.add_parser(
         "page-label-to-number", help="Convert page label to page number."
@@ -205,6 +219,8 @@ def main(args):
         )
     elif args.command == "export-info":
         pdf.export_info(info_file=args.INFO_PATH)
+    elif args.command == "import-info":
+        pdf.import_info(info_file=args.INFO_PATH, target_pdf=args.target, save_pdf=True)
     elif args.command == "page-label-to-number":
         pdf.get_page_number(label=args.PAGE_LABEL)
     elif args.command == "page-number-to-label":

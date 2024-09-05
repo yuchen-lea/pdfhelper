@@ -1,5 +1,6 @@
 #+TITLE: 帮助文档
 
+[[file:CHANGELOG.org][Changelog]]
 
 * 概述
 
@@ -27,23 +28,27 @@ pip install -r requirements.txt
 
 * 使用方法
 
-: pdfhelper -h
+#+begin_src bash :results raw
+pdfhelper -h
+#+end_src
 
-#+begin_example
+#+RESULTS:
 usage: pdfhelper [-h] [--version]
-                 {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+                 {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,export-info,import-info,page-label-to-number,page-number-to-label}
                  ... INFILE
 
 Some useful functions to process a PDF file.
 
 positional arguments:
-  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,page-label-to-number,page-number-to-label}
+  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,export-info,import-info,page-label-to-number,page-number-to-label}
     export-toc          Export the TOC of the PDF.
     import-toc          Import TOC from a file into the PDF.
     delete-annot        Delete annotations from the PDF.
     export-xfdf-annot   Export XFDF annotations of the PDF.
     import-xfdf-annot   Import XFDF annotations of the PDF.
     export-annot        Export formatted text annotations of the PDF.
+    export-info         Export information of the PDF.
+    import-info         Import information of the PDF.
     page-label-to-number
                         Convert page label to page number.
     page-number-to-label
@@ -53,7 +58,6 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
-#+end_example
 
 
 ** 目录格式
@@ -115,28 +119,6 @@ You can customize the note format by
 - ~--toc-list-item-format~
 - ~--annot-list-item-format~
 
-* Changelog
-
-- 2.4.0
-  + new feature =export-info=: Export PDF info to xml file
-- 2.3.0
-  + =export-annot= supports [[https://pypi.org/project/Mako/][Mako]] templates
-- 2.2.0
-  + new feature =import-xfdf-annot=
-- 2.1.0
-  + new feature =export-xfdf-annot=
-- 2.0.0
-  + ⭐ Update argument parsing structure to use subparsers for clearer command distinction.
-  + add Makefile to install and uninstall script
-- 1.4.0
-  + new feature =delete-annot=: Delete all annots in pdf
-- 1.3.0
-  + improve feature =import-toc=: Support set the first page and fix a gap. See more info [[*TOC format][here]]
-- 1.2.0
-  + new feature =export-annot=: Export the annotations of PDF
-- 1.1.0
-  + new feature =export-toc=: Export the toc of pdf to human-readable file. You can see the format [[*TOC format][here]]
-  + new feature =import-toc=: Import the toc of pdf, the toc shares the same format with the exported one
 * Credits
 
 此项目受到以下工具的启发：
