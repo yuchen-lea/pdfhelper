@@ -8,6 +8,8 @@ x.y.z version description:
 
 ----------------
 
+- 2.5.1
+  + support @label to set page label when =import-toc=
 - 2.5.0
   + new feature =import-info=: Import PDF info from xml file
 - 2.4.1

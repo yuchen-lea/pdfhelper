@@ -24,7 +24,7 @@ def create_argparser():
         help="PDF file to process",
         type=argparse.FileType("rb"),
     )
-    p.add_argument("--version", "-v", action="version", version="2.5.0")
+    p.add_argument("--version", "-v", action="version", version="2.5.1")
 
     # export-toc
     parser_export_toc = subparsers.add_parser(

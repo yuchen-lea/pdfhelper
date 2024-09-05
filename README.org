@@ -64,6 +64,9 @@ options:
 ** TOC format
 Sample toc file:
 #+begin_example
+@label 1=A
+@label 8=[p-]II
+@label 16=1
 - Cover#1
 - The Ten Commandments#2
 - The Five Rules#3
@@ -98,6 +101,10 @@ Here, you see three ways of customization:
 - 4. Numbers Games#58
    #+end_example
    + useful when there are missing or extra pages. At the location of missing pages (for instance, where blank pages counted in the pagination have been removed), set "# -[number of missing pages]". At the location where pages are added (like illustration pages not counted in the pagination), set "# +[number of added pages]".
+4. Set the labels:
+  - Starting from page 1, the page numbering style will be uppercase letters. Page 1 will display as "A", page 2 as "B", and so on, until page 7.
+  - Starting from page 8, the page numbering style will switch to uppercase Roman numerals with the prefix "p-". Page 8 will display as "p-II", page 9 as "p-III", and so on, until page 15.
+  - Starting from page 16, the page numbering will be in Arabic numerals. Page 16 will display as "1", page 17 as "2", and so on, until the end of the document.
 
 ** Export Annotations
 

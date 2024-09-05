@@ -22,17 +22,18 @@ make install
 pip install -r requirements.txt
 #+end_src
 
-然后开始使用=pdfhelper=命令行工具吧！
+然后开始使用 =pdfhelper= 命令行工具吧！
 
 对于后续的更新，只需从git拉取最新的代码并运行=make update=。
 
 * 使用方法
 
-#+begin_src bash :results raw
+#+begin_src bash :results drawer
 pdfhelper -h
 #+end_src
 
 #+RESULTS:
+:results:
 usage: pdfhelper [-h] [--version]
                  {export-toc,import-toc,delete-annot,export-xfdf-annot,import-xfdf-annot,export-annot,export-info,import-info,page-label-to-number,page-number-to-label}
                  ... INFILE
@@ -58,12 +59,15 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --version, -v         show program's version number and exit
-
+:end:
 
 ** 目录格式
 
 实例：
 #+begin_example
+@label 1=A
+@label 8=[p-]II
+@label 16=1
 - Cover#1
 - The Ten Commandments#2
 - The Five Rules#3
@@ -78,7 +82,7 @@ options:
 - 4. Numbers Games#58
 #+end_example
 
-共有三种设置方式：
+共有以下几种设置方式：
 
 1. 设置页码: 为第3页设置目录“The Five Rules”
    #+begin_example
@@ -97,6 +101,10 @@ options:
 - 4. Numbers Games#58
    #+end_example
    + 当有缺失或额外的页面时很有用。在缺失页面的位置（例如，计入页码的空白页已被删除），设置“# -[缺失的页面数]”。在额外页面的位置（例如，插图页面未计入页码），设置“# +[添加的页面数]”。
+4. 设置label：
+   - 从第1页开始，页码样式为大写字母，第1页的页码会显示为 "A"，第2页为 "B"，依此类推，直到第7页。
+   - 从第8页开始，页码样式切换为带有前缀 "p-" 的大写罗马数字。第8页的页码会显示为 "p-II"，第9页为 "p-III"，依此类推，直到第15页。
+   - 从第16页开始，第16页的页码会显示为 "1"，第17页为 "2"，依此类推，直到文档结束。
 
 ** 导出注释
 
