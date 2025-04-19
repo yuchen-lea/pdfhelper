@@ -53,7 +53,7 @@ class TocHandler:
             prefix = label.get("prefix", "")
             startpage = label["startpage"] + 1
             firstpagenum = label["firstpagenum"]
-            style = label["style"]
+            style = label.get("style", "None")
             if style in ["A", "a"]:
                 rule_str = int_to_letter(firstpagenum)
                 if style == "A":
@@ -62,6 +62,8 @@ class TocHandler:
                 rule_str = int_to_roman(firstpagenum)
                 if style == "r":
                     rule_str = rule_str.lower()
+            elif style == "None":
+                rule_str = ""
             else:
                 rule_str = str(firstpagenum)
             if prefix:
