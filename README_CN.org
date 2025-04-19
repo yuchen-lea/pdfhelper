@@ -127,6 +127,26 @@ You can customize the note format by
 - ~--toc-list-item-format~
 - ~--annot-list-item-format~
 
+*** Template 支持的变量
+
+使用方法参考 file:format_annots_template.py
+
+| 变量         | 说明                              | toc-list-item | annot-list-item |
+|--------------+-----------------------------------+---------------+-----------------|
+| level        | 层级                              | ✓            | ✓              |
+| page         | 页码                              | ✓            | ✓              |
+| content      | 目录文本                          | ✓            | ✗              |
+| pdf_path     | PDF文件路径                       | ✓            | ✓              |
+| bib_key      | 参考文献key                       | ✓            | ✓              |
+| type         | 笔记类型                          | ✗            | ✓              |
+| text         | annot的自身文本                   | ✗            | ✓              |
+| comment      | annot的注释文本                   | ✗            | ✓              |
+| annot_number | annot编号，从1递增                | ✗            | ✓              |
+| annot_id     | annot在PDF中的ID                  | ✗            | ✓              |
+| height       | annot在页面的位置（0-1）          | ✗            | ✓              |
+| color        | annot颜色的hex code，例如 #e44234 | ✗            | ✓              |
+| pic_path     | annot的图片路径                   | ✗            | ✓              |
+
 * Credits
 
 此项目受到以下工具的启发：

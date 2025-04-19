@@ -127,6 +127,25 @@ You can customize the note format by:
 - ~--with-toc~
 - ~--toc-list-item-format~
 - ~--annot-list-item-format~
+*** Template Variables
+
+For usage reference, see file:format_annots_template.py
+
+| Variable     | Description                           | toc-list-item | annot-list-item |
+|--------------+---------------------------------------+---------------+-----------------|
+| level        | Level                                 | ✓            | ✓              |
+| page         | Page number                           | ✓            | ✓              |
+| content      | Table of contents text                | ✓            | ✗              |
+| pdf_path     | PDF file path                         | ✓            | ✓              |
+| bib_key      | Reference key                         | ✓            | ✓              |
+| type         | Note type                             | ✗            | ✓              |
+| text         | annot's own text                      | ✗            | ✓              |
+| comment      | annot's comment                       | ✗            | ✓              |
+| annot_number | annot number, increments from 1       | ✗            | ✓              |
+| annot_id     | annot ID in PDF                       | ✗            | ✓              |
+| height       | annot position on page (0-1)          | ✗            | ✓              |
+| color        | annot color's hex code, e.g., #e44234 | ✗            | ✓              |
+| pic_path     | annot image path                      | ✗            | ✓              |
 
 * Credits
 This project is inspired by the following tool:
