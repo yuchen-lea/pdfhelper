@@ -1,3 +1,2 @@
-PyMuPDF==1.23.3
-requests==2.28.2
-Mako==1.2.4
+PyMuPDF>=1.23.3
+Mako>=1.2.4

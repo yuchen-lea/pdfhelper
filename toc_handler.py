@@ -3,9 +3,6 @@ import argparse
 
 import re
 
-import requests
-from bs4 import BeautifulSoup
-
 
 class TocHandler:
     def save_pymupdf_toc_to_file(
@@ -79,24 +76,6 @@ class TocHandler:
                 print(toc_text, file=data)
         except IOError as ioerr:
             print("File Error: " + str(ioerr))
-
-    def get_toc_list_from_chinapub(self, url: str):
-        res = requests.get(url)  # "http://product.china-pub.com/229169"
-        content = res.content
-        soup = BeautifulSoup(content, "lxml")
-        ml = soup.select("#ml + div")[0]
-        ml_txt = ml.text
-        lines = []
-        for ml in ml_txt.split("\n"):
-            raw_line = ml.strip()
-            line_with_page_match = re.match(r"(.+?)(\d+)?$", raw_line)
-            if line_with_page_match:
-                title = line_with_page_match.group(1)
-                page = line_with_page_match.group(2)
-                line = f"- {title}#{page}" if page else f"- {title}"
-                line = re.sub("\s", " ", line)
-                lines.append(line)
-        return lines
 
     def convert_toc_list_to_pymupdf_toc(self, toc_list: list):
         toc = []

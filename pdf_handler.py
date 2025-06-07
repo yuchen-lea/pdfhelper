@@ -95,11 +95,6 @@ class PdfHelper(object):
         toc_path = self._get_target_file_path(target=toc_path, file_type="txt")
         TocHandler().save_pymupdf_toc_to_file(pymupdf_toc=toc, page_labels=page_labels, toc_path=toc_path)
 
-    def import_toc_from_url(self, url: str, target_pdf: str = ""):
-        toc_list = TocHandler().get_toc_list_from_chinapub(url=url)
-        toc = TocHandler().convert_toc_list_to_pymupdf_toc(toc_list=toc_list)
-        self.save_toc(toc=toc, target_pdf=target_pdf)
-
     def import_toc_from_file(self, toc_path: str, target_pdf: str = ""):
         with open(toc_path, "r") as data:
             lines = data.readlines()
