@@ -36,11 +36,12 @@ class TocHandler:
                                                      label rule.
                                 - "firstpagenum" (int): start numbering with this value..
                                 - "style" (str): The style of numbering, which can be one of:
+                                                 "D" (decimal numbers, default),
                                                  "A" (uppercase letters),
-                                                 "a" (lowercase letters),
+                                                 "a" (lowercase letters), 
                                                  "R" (uppercase Roman numerals),
                                                  "r" (lowercase Roman numerals),
-                                                 or other numeric styles.
+                                                 "" (empty string, no numbering, only prefix).
 
         Returns:
             str: A string representing the formatted page labels, each on a new line.
@@ -50,7 +51,7 @@ class TocHandler:
             prefix = label.get("prefix", "")
             startpage = label["startpage"] + 1
             firstpagenum = label["firstpagenum"]
-            style = label.get("style", "None")
+            style = label.get("style", "")
             if style in ["A", "a"]:
                 rule_str = int_to_letter(firstpagenum)
                 if style == "A":
@@ -59,7 +60,7 @@ class TocHandler:
                 rule_str = int_to_roman(firstpagenum)
                 if style == "r":
                     rule_str = rule_str.lower()
-            elif style == "None":
+            elif style == "":
                 rule_str = ""
             else:
                 rule_str = str(firstpagenum)
@@ -91,7 +92,7 @@ class TocHandler:
             gap_match = re.match(r" *# *([\+\-]\d+)", line)
             first_page_match = re.match(r" *# *(\d+) *= *(-?\d+) *", line)
             label_match = re.match(
-                r"@label *(\d+) *= *([\[【（\(](.*)[\]】）\)])? *([\w\-]+)", line
+                r"@label *(\d+) *= *([\[【（\(](.*)[\]】）\)])? *([\w\-]*)", line
             )
             indent_step = 2
 
@@ -128,9 +129,13 @@ class TocHandler:
             elif label_match:
                 startpage = int(label_match.group(1)) - 1
                 prefix = label_match.group(3) or ""
-                rule = label_match.group(4)
+                rule = label_match.group(4) or ""
 
-                if re.match(roman_numeral_pattern, rule.upper()):
+                if rule == "":
+                    # No rule specified, use empty style
+                    style = ""
+                    firstpagenum = 1
+                elif re.match(roman_numeral_pattern, rule.upper()):
                     style = "R" if rule.isupper() else "r"
                     firstpagenum = roman_to_int(rule.upper())
                 elif rule.isdigit():
@@ -152,7 +157,7 @@ class TocHandler:
                 )
             else:
                 if line.strip():
-                    raise ("Unsuppoted Format!")
+                    raise Exception("Unsupported Format!")
         return toc, page_labels
 
     def is_toc_item(self, text: str):
