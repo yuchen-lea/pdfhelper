@@ -750,9 +750,26 @@ class AnnotationHandler(object):
             export_picture_with_annot = (
                 False if self.type_id == SQUARE else True
             )  # TODO maybe let user customize this?
+            
+            # Get the clipping rectangle and validate its validity
+            clip_rect = self.rect_list[0]
+            
+            # Check if the rectangle is valid (width and height must be greater than 0)
+            if clip_rect.width <= 0 or clip_rect.height <= 0:
+                print(f"Warning: Invalid rectangle size {clip_rect}, skipping image saving")
+                return 0
+            
+            # Ensure the rectangle is within the page boundaries
+            page_rect = self.page.rect
+            clip_rect = clip_rect & page_rect  # Take the intersection
+            
+            if clip_rect.is_empty:
+                print(f"Warning: Rectangle is out of page bounds, skipping image saving")
+                return 0
+                
             pix = self.page.get_pixmap(
                 annots=export_picture_with_annot,
-                clip=self.rect_list[0],
+                clip=clip_rect,
                 matrix=fitz.Matrix(zoom, zoom),  # zoom image
             )
             pix.save(picture_path)
